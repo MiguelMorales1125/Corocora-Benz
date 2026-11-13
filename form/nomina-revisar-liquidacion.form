@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_payPeriodId",
       "key": "payPeriodId",
+      "defaultValue": "2026-11-Q2",
       "disabled": true
     },
     {
@@ -19,6 +20,7 @@
       "type": "textarea",
       "id": "Field_payrollSummary",
       "key": "payrollSummary",
+      "defaultValue": "Liquidación simulada del periodo 2026-11-Q2, sin excepciones automáticas",
       "disabled": true
     },
     {
@@ -26,6 +28,7 @@
       "type": "number",
       "id": "Field_payrollTotal",
       "key": "payrollTotal",
+      "defaultValue": 1000000,
       "disabled": true
     },
     {
@@ -33,6 +36,7 @@
       "type": "checkbox",
       "id": "Field_payrollConsistent",
       "key": "payrollConsistent",
+      "defaultValue": true,
       "validate": {
         "required": false
       }
@@ -42,6 +46,7 @@
       "type": "textarea",
       "id": "Field_reviewComment",
       "key": "reviewComment",
+      "defaultValue": "Liquidación revisada sin observaciones",
       "validate": {
         "required": false
       }

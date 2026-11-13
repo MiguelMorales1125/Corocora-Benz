@@ -110,17 +110,17 @@
     <bpmn:userTask id="fixBankBatch" name="Corregir lote o consultar al Banco" camunda:candidateGroups="tesoreria">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="bankResponseCode" label="Código de respuesta del Banco" type="string">
+          <camunda:formField id="bankResponseCode" label="Código de respuesta del Banco" type="string" defaultValue="R03 - Cuenta destino inválida">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="paymentBatchId" label="ID del lote" type="string">
+          <camunda:formField id="paymentBatchId" label="ID del lote" type="string" defaultValue="LOTE-0001">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="correction" label="Corrección o gestión realizada" type="string">
+          <camunda:formField id="correction" label="Corrección o gestión realizada" type="string" defaultValue="Se consultó al banco y se corrigió la cuenta">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
@@ -174,17 +174,17 @@
     <bpmn:userTask id="prepareBankBatch" name="Preparar lote de dispersión" camunda:candidateGroups="tesoreria">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="payrollTotal" label="Total aprobado" type="long">
+          <camunda:formField id="payrollTotal" label="Total aprobado" type="long" defaultValue="1000000">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="paymentBatchId" label="ID del lote" type="string">
+          <camunda:formField id="paymentBatchId" label="ID del lote" type="string" defaultValue="LOTE-0001">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="bankAccount" label="Cuenta de origen" type="string">
+          <camunda:formField id="bankAccount" label="Cuenta de origen" type="string" defaultValue="000-123">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
@@ -202,18 +202,18 @@
     <bpmn:userTask id="approvePayroll" name="Aprobar liquidación" camunda:candidateGroups="jefatura-nomina">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="payrollSummary" label="Resumen de la liquidación" type="string">
+          <camunda:formField id="payrollSummary" label="Resumen de la liquidación" type="string" defaultValue="Liquidación simulada del periodo 2026-11-Q2, sin excepciones automáticas">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="payrollTotal" label="Total a pagar" type="long">
+          <camunda:formField id="payrollTotal" label="Total a pagar" type="long" defaultValue="1000000">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="payrollApproved" label="Aprobar liquidación" type="boolean" />
-          <camunda:formField id="approvalReason" label="Motivo o devolución" type="string">
+          <camunda:formField id="payrollApproved" label="Aprobar liquidación" type="boolean" defaultValue="true" />
+          <camunda:formField id="approvalReason" label="Motivo o devolución" type="string" defaultValue="Aprobada">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
@@ -296,19 +296,19 @@
     <bpmn:userTask id="correctChanges" name="Corregir novedades o reabrir periodo" camunda:candidateGroups="gestion-talento-humano">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="reasonCode" label="Motivo de la devolución" type="string">
+          <camunda:formField id="reasonCode" label="Motivo de la devolución" type="string" defaultValue="SOPORTE_INCOMPLETO">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="correctionAction" label="Acción realizada" type="enum">
+          <camunda:formField id="correctionAction" label="Acción realizada" type="enum" defaultValue="FIX_RECORDS">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
             <camunda:value id="FIX_RECORDS" name="Completar soportes o corregir novedades" />
             <camunda:value id="REQUEST_REOPEN" name="Reabrir el periodo" />
           </camunda:formField>
-          <camunda:formField id="correctionNotes" label="Detalle de la corrección" type="string">
+          <camunda:formField id="correctionNotes" label="Detalle de la corrección" type="string" defaultValue="Soportes cargados">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
@@ -322,13 +322,13 @@
     <bpmn:userTask id="approveLateChanges" name="Aprobar novedades fuera de corte" camunda:candidateGroups="jefatura-nomina">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="lateChangesSummary" label="Novedades fuera de corte" type="string">
+          <camunda:formField id="lateChangesSummary" label="Novedades fuera de corte" type="string" defaultValue="EMP-003 · Horas extra · 4 h registradas después de la fecha de corte">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="lateChangesApproved" label="Aprobar las novedades" type="boolean" />
-          <camunda:formField id="lateDecisionReason" label="Motivo de la decisión" type="string">
+          <camunda:formField id="lateChangesApproved" label="Aprobar las novedades" type="boolean" defaultValue="true" />
+          <camunda:formField id="lateDecisionReason" label="Motivo de la decisión" type="string" defaultValue="Autorizada por gerencia">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>

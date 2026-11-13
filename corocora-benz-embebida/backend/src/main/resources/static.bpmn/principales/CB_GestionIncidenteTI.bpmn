@@ -80,22 +80,22 @@
     <bpmn:userTask id="reviewSla" name="Revisar incidente con plazo vencido" camunda:candidateGroups="responsables-ti">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="ticketId" label="Ticket" type="string">
+          <camunda:formField id="ticketId" label="Ticket" type="string" defaultValue="TI-0001">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="priority" label="Prioridad" type="string">
+          <camunda:formField id="priority" label="Prioridad" type="string" defaultValue="P3">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="recoveryPlan" label="Plan de atención" type="string">
+          <camunda:formField id="recoveryPlan" label="Plan de atención" type="string" defaultValue="Escalar al fabricante de la cámara">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="newOwner" label="Nuevo responsable" type="string" />
+          <camunda:formField id="newOwner" label="Nuevo responsable" type="string" defaultValue="demo" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_06</bpmn:incoming>
@@ -109,7 +109,7 @@
     <bpmn:userTask id="confirmSolution" name="Confirmar solución del incidente" camunda:assignee="${requesterId}">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="userConfirmed" label="¿La solución resolvió el incidente?" type="boolean"></camunda:formField>
+          <camunda:formField id="userConfirmed" label="¿La solución resolvió el incidente?" type="boolean" defaultValue="true"></camunda:formField>
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_09</bpmn:incoming>

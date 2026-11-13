@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_employeeId",
       "key": "employeeId",
+      "defaultValue": "EMP-001",
       "disabled": true
     },
     {
@@ -19,6 +20,7 @@
       "type": "textfield",
       "id": "Field_changeType",
       "key": "changeType",
+      "defaultValue": "Horas extra",
       "disabled": true
     },
     {
@@ -26,6 +28,7 @@
       "type": "number",
       "id": "Field_changeValue",
       "key": "changeValue",
+      "defaultValue": 2,
       "disabled": true
     },
     {
@@ -33,6 +36,7 @@
       "type": "checkbox",
       "id": "Field_supportAttached",
       "key": "supportAttached",
+      "defaultValue": true,
       "disabled": true
     },
     {
@@ -40,6 +44,7 @@
       "type": "checkbox",
       "id": "Field_changeValid",
       "key": "changeValid",
+      "defaultValue": true,
       "validate": {
         "required": false
       }
@@ -49,6 +54,7 @@
       "type": "textarea",
       "id": "Field_reviewComment",
       "key": "reviewComment",
+      "defaultValue": "Soporte verificado",
       "validate": {
         "required": false
       }

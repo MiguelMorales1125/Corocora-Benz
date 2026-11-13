@@ -138,17 +138,17 @@
     <bpmn:userTask id="scheduleWorkshop" name="Agendar cita en el taller" camunda:candidateGroups="coordinadores-postventa">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="dealerId" label="Taller asignado" type="string">
+          <camunda:formField id="dealerId" label="Taller asignado" type="string" defaultValue="TALLER-BOG-01">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="appointmentDate" label="Fecha y hora de la cita" type="string">
+          <camunda:formField id="appointmentDate" label="Fecha y hora de la cita" type="string" defaultValue="2026-11-20 09:00">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="serviceOrderId" label="Número de orden de taller" type="string">
+          <camunda:formField id="serviceOrderId" label="Número de orden de taller" type="string" defaultValue="OT-0001">
             <camunda:validation>
               <camunda:constraint name="required" />
             </camunda:validation>
@@ -182,29 +182,29 @@
     <bpmn:userTask id="deliverVehicle" name="Entregar vehículo y cerrar caso" camunda:candidateGroups="asesores-servicio">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="serviceOrderId" label="Orden de taller" type="string">
+          <camunda:formField id="serviceOrderId" label="Orden de taller" type="string" defaultValue="OT-0001">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="repairNotes" label="Trabajo realizado" type="string">
+          <camunda:formField id="repairNotes" label="Trabajo realizado" type="string" defaultValue="Se reemplazó el módulo de cámara">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="serviceCost" label="Costo del servicio" type="long">
+          <camunda:formField id="serviceCost" label="Costo del servicio" type="long" defaultValue="350000">
             <camunda:validation>
               <camunda:constraint name="readonly" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="customerSatisfaction" label="Satisfacción del cliente (1 a 5)" type="long">
+          <camunda:formField id="customerSatisfaction" label="Satisfacción del cliente (1 a 5)" type="long" defaultValue="5">
             <camunda:validation>
               <camunda:constraint name="required" />
               <camunda:constraint name="min" config="1" />
               <camunda:constraint name="max" config="6" />
             </camunda:validation>
           </camunda:formField>
-          <camunda:formField id="deliveryNote" label="Observación de entrega" type="string" />
+          <camunda:formField id="deliveryNote" label="Observación de entrega" type="string" defaultValue="Vehículo entregado al cliente" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_25</bpmn:incoming>

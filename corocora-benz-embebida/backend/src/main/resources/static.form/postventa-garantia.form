@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_vin",
       "key": "vin",
+      "defaultValue": "CB0TEST0000000001",
       "disabled": true
     },
     {
@@ -19,6 +20,7 @@
       "type": "number",
       "id": "Field_mileageKm",
       "key": "mileageKm",
+      "defaultValue": 15000,
       "disabled": true
     },
     {
@@ -26,6 +28,7 @@
       "type": "textarea",
       "id": "Field_symptom",
       "key": "symptom",
+      "defaultValue": "La cámara de reversa no muestra imagen",
       "disabled": true
     },
     {
@@ -33,6 +36,7 @@
       "type": "textfield",
       "id": "Field_coverageStatus",
       "key": "coverageStatus",
+      "defaultValue": "CAMPANA_ACTIVA",
       "disabled": true
     },
     {
@@ -40,6 +44,7 @@
       "type": "textfield",
       "id": "Field_coverageReason",
       "key": "coverageReason",
+      "defaultValue": "VIN incluido en campaña activa de cámara de reversa",
       "disabled": true
     },
     {
@@ -47,6 +52,7 @@
       "type": "checkbox",
       "id": "Field_coverageApproved",
       "key": "coverageApproved",
+      "defaultValue": true,
       "validate": {
         "required": false
       }
@@ -56,6 +62,7 @@
       "type": "textarea",
       "id": "Field_warrantyNote",
       "key": "warrantyNote",
+      "defaultValue": "Aplica campaña de cámara de reversa",
       "validate": {
         "required": true
       }

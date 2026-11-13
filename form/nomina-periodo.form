@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_payPeriodId",
       "key": "payPeriodId",
+      "defaultValue": "2026-11-Q2",
       "description": "Ejemplo: 2026-11-Q2",
       "validate": {
         "required": true
@@ -22,6 +23,7 @@
       "type": "select",
       "id": "Field_payCycle",
       "key": "payCycle",
+      "defaultValue": "QUINCENAL",
       "validate": {
         "required": true
       },
@@ -41,6 +43,7 @@
       "type": "datetime",
       "id": "Field_cutoffDate",
       "key": "cutoffDate",
+      "defaultValue": "2026-11-25",
       "validate": {
         "required": true
       },

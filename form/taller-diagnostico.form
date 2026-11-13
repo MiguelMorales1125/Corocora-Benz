@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_vin",
       "key": "vin",
+      "defaultValue": "CB0TEST0000000001",
       "disabled": true
     },
     {
@@ -19,6 +20,7 @@
       "type": "textarea",
       "id": "Field_symptom",
       "key": "symptom",
+      "defaultValue": "La cámara de reversa no muestra imagen",
       "disabled": true
     },
     {
@@ -26,6 +28,7 @@
       "type": "number",
       "id": "Field_mileageKm",
       "key": "mileageKm",
+      "defaultValue": 15000,
       "validate": {
         "required": true
       }
@@ -35,6 +38,7 @@
       "type": "textarea",
       "id": "Field_diagnosis",
       "key": "diagnosis",
+      "defaultValue": "Falla en el módulo de cámara",
       "validate": {
         "required": true
       }
@@ -44,6 +48,7 @@
       "type": "checkbox",
       "id": "Field_additionalPartNeeded",
       "key": "additionalPartNeeded",
+      "defaultValue": false,
       "validate": {
         "required": false
       }
@@ -53,6 +58,7 @@
       "type": "textfield",
       "id": "Field_partCode",
       "key": "partCode",
+      "defaultValue": "CAM-123",
       "description": "Solo si requiere repuesto adicional",
       "validate": {
         "required": false

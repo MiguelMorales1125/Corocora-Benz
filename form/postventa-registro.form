@@ -12,6 +12,7 @@
       "type": "textfield",
       "id": "Field_vin",
       "key": "vin",
+      "defaultValue": "CB0TEST0000000001",
       "disabled": true
     },
     {
@@ -19,6 +20,7 @@
       "type": "textfield",
       "id": "Field_customerName",
       "key": "customerName",
+      "defaultValue": "Cliente de prueba",
       "disabled": true
     },
     {
@@ -26,6 +28,7 @@
       "type": "textfield",
       "id": "Field_serviceType",
       "key": "serviceType",
+      "defaultValue": "Garantía",
       "disabled": true
     },
     {
@@ -33,6 +36,7 @@
       "type": "number",
       "id": "Field_mileageKm",
       "key": "mileageKm",
+      "defaultValue": 15000,
       "disabled": true
     },
     {
@@ -40,6 +44,7 @@
       "type": "textarea",
       "id": "Field_symptom",
       "key": "symptom",
+      "defaultValue": "La cámara de reversa no muestra imagen",
       "disabled": true
     },
     {
@@ -47,6 +52,7 @@
       "type": "select",
       "id": "Field_dealerId",
       "key": "dealerId",
+      "defaultValue": "TALLER-BOG-01",
       "validate": {
         "required": true
       },
@@ -70,6 +76,7 @@
       "type": "textarea",
       "id": "Field_registrationNote",
       "key": "registrationNote",
+      "defaultValue": "Cliente reporta falla en la cámara de reversa",
       "validate": {
         "required": false
       }
