@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 16,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.52.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "components": [
+    {
+      "label": "Periodo",
+      "type": "textfield",
+      "id": "Field_payPeriodId",
+      "key": "payPeriodId",
+      "disabled": true
+    },
+    {
+      "label": "Resumen de la liquidación",
+      "type": "textarea",
+      "id": "Field_payrollSummary",
+      "key": "payrollSummary",
+      "disabled": true
+    },
+    {
+      "label": "Total calculado",
+      "type": "number",
+      "id": "Field_payrollTotal",
+      "key": "payrollTotal",
+      "disabled": true
+    },
+    {
+      "label": "Liquidación consistente",
+      "type": "checkbox",
+      "id": "Field_payrollConsistent",
+      "key": "payrollConsistent",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "label": "Observación",
+      "type": "textarea",
+      "id": "Field_reviewComment",
+      "key": "reviewComment",
+      "validate": {
+        "required": false
+      }
+    }
+  ],
+  "type": "default",
+  "id": "nomina-revisar-liquidacion"
+}

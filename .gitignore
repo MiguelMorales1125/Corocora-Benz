@@ -1,0 +1,7 @@
+# Compilación y dependencias
+target/
+node_modules/
+
+# IDE
+.idea/
+*.iml

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 16,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.52.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "components": [
+    {
+      "label": "VIN",
+      "type": "textfield",
+      "id": "Field_vin",
+      "key": "vin",
+      "disabled": true
+    },
+    {
+      "label": "Síntoma reportado",
+      "type": "textarea",
+      "id": "Field_symptom",
+      "key": "symptom",
+      "disabled": true
+    },
+    {
+      "label": "Kilometraje de recepción",
+      "type": "number",
+      "id": "Field_mileageKm",
+      "key": "mileageKm",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Diagnóstico",
+      "type": "textarea",
+      "id": "Field_diagnosis",
+      "key": "diagnosis",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Requiere repuesto adicional",
+      "type": "checkbox",
+      "id": "Field_additionalPartNeeded",
+      "key": "additionalPartNeeded",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "label": "Código del repuesto",
+      "type": "textfield",
+      "id": "Field_partCode",
+      "key": "partCode",
+      "description": "Solo si requiere repuesto adicional",
+      "validate": {
+        "required": false
+      }
+    }
+  ],
+  "type": "default",
+  "id": "taller-diagnostico"
+}

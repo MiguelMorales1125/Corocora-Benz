@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 16,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.52.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "components": [
+    {
+      "label": "VIN",
+      "type": "textfield",
+      "id": "Field_vin",
+      "key": "vin",
+      "disabled": true
+    },
+    {
+      "label": "Cliente",
+      "type": "textfield",
+      "id": "Field_customerName",
+      "key": "customerName",
+      "disabled": true
+    },
+    {
+      "label": "Tipo de servicio",
+      "type": "textfield",
+      "id": "Field_serviceType",
+      "key": "serviceType",
+      "disabled": true
+    },
+    {
+      "label": "Kilometraje",
+      "type": "number",
+      "id": "Field_mileageKm",
+      "key": "mileageKm",
+      "disabled": true
+    },
+    {
+      "label": "Síntoma reportado",
+      "type": "textarea",
+      "id": "Field_symptom",
+      "key": "symptom",
+      "disabled": true
+    },
+    {
+      "label": "Taller asignado",
+      "type": "select",
+      "id": "Field_dealerId",
+      "key": "dealerId",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Taller Bogotá Norte",
+          "value": "TALLER-BOG-01"
+        },
+        {
+          "label": "Taller Medellín",
+          "value": "TALLER-MED-01"
+        },
+        {
+          "label": "Taller Cali",
+          "value": "TALLER-CAL-01"
+        }
+      ]
+    },
+    {
+      "label": "Observación del asesor",
+      "type": "textarea",
+      "id": "Field_registrationNote",
+      "key": "registrationNote",
+      "validate": {
+        "required": false
+      }
+    }
+  ],
+  "type": "default",
+  "id": "postventa-registro"
+}

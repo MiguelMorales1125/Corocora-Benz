@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 16,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.52.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "components": [
+    {
+      "label": "VIN",
+      "type": "textfield",
+      "id": "Field_vin",
+      "key": "vin",
+      "disabled": true
+    },
+    {
+      "label": "Kilometraje",
+      "type": "number",
+      "id": "Field_mileageKm",
+      "key": "mileageKm",
+      "disabled": true
+    },
+    {
+      "label": "Síntoma reportado",
+      "type": "textarea",
+      "id": "Field_symptom",
+      "key": "symptom",
+      "disabled": true
+    },
+    {
+      "label": "Resultado DMN",
+      "type": "textfield",
+      "id": "Field_coverageStatus",
+      "key": "coverageStatus",
+      "disabled": true
+    },
+    {
+      "label": "Motivo DMN",
+      "type": "textfield",
+      "id": "Field_coverageReason",
+      "key": "coverageReason",
+      "disabled": true
+    },
+    {
+      "label": "Aprobar atención por garantía o campaña",
+      "type": "checkbox",
+      "id": "Field_coverageApproved",
+      "key": "coverageApproved",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "label": "Justificación",
+      "type": "textarea",
+      "id": "Field_warrantyNote",
+      "key": "warrantyNote",
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "type": "default",
+  "id": "postventa-garantia"
+}

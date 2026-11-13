@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 16,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.52.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "components": [
+    {
+      "label": "Ticket",
+      "type": "textfield",
+      "id": "Field_ticketId",
+      "key": "ticketId",
+      "disabled": true
+    },
+    {
+      "label": "Prioridad",
+      "type": "textfield",
+      "id": "Field_priority",
+      "key": "priority",
+      "disabled": true
+    },
+    {
+      "label": "Descripción",
+      "type": "textarea",
+      "id": "Field_description",
+      "key": "description",
+      "disabled": true
+    },
+    {
+      "label": "Causa raíz",
+      "type": "textarea",
+      "id": "Field_rootCause",
+      "key": "rootCause",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Solución aplicada",
+      "type": "textarea",
+      "id": "Field_resolutionSummary",
+      "key": "resolutionSummary",
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "type": "default",
+  "id": "ti-diagnostico"
+}
