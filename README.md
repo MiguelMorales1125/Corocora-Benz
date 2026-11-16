@@ -1,81 +1,54 @@
 # Corocora Benz
 
-Tres procesos de negocio hechos en Camunda 7 (embebido en Spring Boot) con workers en JavaScript y API en Swagger.
-
-## Integrantes
-
-- [1] [Sander Farid Sierra Reyes - 160005033]: Gestión de Incidentes TI. Archivos: `bpmn/principales/CB_GestionIncidenteTI.bpmn`, `bpmn/reutilizables/CB_ResolverIncidenteTI.bpmn`, `dmn/CB_ClasificarIncidenteTI.dmn`, `form/ti-*.form`
-- [2] [Miguel Ángel Rincón Morales - 160005038]: Postventa y Garantías. Archivos: `bpmn/principales/CB_PostventaGarantias.bpmn`, `bpmn/reutilizables/CB_AtenderOrdenTaller.bpmn`, `dmn/CB_EvaluarCoberturaGarantia.dmn`, `form/postventa-*.form`, `form/taller-diagnostico.form`
-- [3] [Nicolas Alejandro Cabezas Daza - 160005006]: Gestión de Nómina. Archivos: `bpmn/principales/CB_GestionNomina.bpmn`, `bpmn/reutilizables/CB_ValidarNovedadEmpleado.bpmn`, `dmn/CB_ClasificarExcepcionNomina.dmn`, `form/nomina-*.form`
-
-Los workers los hicieron las personas 1 y 2. Toda la maquina embebida junto a la documentación de Swagger la hizo la persona 3.
+Demostración académica de Postventa, Incidentes de TI y Nómina con Camunda 7 y seis aplicaciones Spring Boot. Los datos, los servicios bancarios y las reglas de nómina son simulados.
 
 ## Arquitectura
 
-Seguimos el modelo del caso MSGF: un motor Camunda que orquesta 5 sistemas de información. El plan completo está en [`docs/PLAN-MICROSERVICIOS.md`](docs/PLAN-MICROSERVICIOS.md).
+```mermaid
+flowchart LR
+  PC[Portal Cliente :9001] -->|REST y mensajes| E[Motor Camunda :9000]
+  TI[Portal TI :9002] -->|REST y tareas| E
+  CS[CentralSys :9003] -->|REST y formularios| E
+  E -->|HTTP Connector| TI
+  E -->|HTTP Connector| BA[Banco :9004]
+  E -->|HTTP Connector| TB[Taller y Bodega :9005]
+  BA -->|mensajes| E
+  TB -->|mensajes| E
+  PC -->|consultar cotizaciones| TB
+```
 
-| Módulo | Puerto | Qué es |
-|---|---|---|
-| `cb-bpm-engine` | 9000 | Motor Camunda 7 embebido (procesos, DMN, forms, REST API, Cockpit, Tasklist) |
-| `cb-portal-cliente` | 9001 | Portal web del cliente de postventa |
-| `cb-portal-ti` | 9002 | Portal web de autoservicio TI y API de tickets |
-| `cb-central-sys` | 9003 | Intranet de los empleados |
-| `cb-banco` | 9004 | API del banco (dispersión de nómina) |
-| `cb-taller-bodega` | 9005 | API de vehículos, cotizaciones y repuestos |
+El motor usa JavaDelegates para nómina y notificaciones, y conectores HTTP para los servicios externos y tickets. Banco y Bodega responden mediante mensajes con la misma `businessKey`. No se necesitan workers JavaScript. Los modelos editables están en `bpmn/`, `dmn/` y `form/`; al cambiar uno se debe actualizar su copia idéntica en `cb-bpm-engine/src/main/resources/static.*`.
 
-Todo es un proyecto Maven multi-módulo en `corocora-benz-embebida/`.
+## Puesta en marcha
 
-## Cómo correrlo
+Requisitos: Java 17 o superior, Maven 3.9 y Node.js 18 o superior para las pruebas. Para PostgreSQL, crea las bases con `psql -U postgres -f corocora-benz-embebida/crear-bases.sql`. Configura `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` según el entorno. El perfil `h2` usa bases en memoria independientes que se borran al detener cada aplicación.
 
-Se necesita Java 17+, Node 18+ y PostgreSQL.
+Desde `corocora-benz-embebida` compila con `mvn package`, y ejecuta cada jar en una terminal diferente:
 
-1. Bases de datos (una sola vez): `psql -U postgres -f corocora-benz-embebida/crear-bases.sql`. Si tu usuario o clave de Postgres no son `postgres`/`postgres`, define las variables de entorno `DB_USER` y `DB_PASSWORD` (y `DB_PORT` si no es 5432).
-2. Compilar todo, desde `corocora-benz-embebida`: `.\mvnw.cmd package -DskipTests`.
-3. Motor: en IntelliJ corre `com.corocorabenz.engine.Application` (módulo `cb-bpm-engine`), o `java -jar cb-bpm-engine\target\cb-bpm-engine-1.0.0-SNAPSHOT.jar`. Queda en http://localhost:9000 y despliega solo todos los procesos, DMN y forms.
-   Sin PostgreSQL: agrega `--spring.profiles.active=h2` (base en memoria, se borra al reiniciar). Sirve igual para los otros módulos.
-4. Los demás sistemas se corren igual, cada uno con su `*Application` o su jar. Para Nómina y Postventa hacen falta **CB-Banco** (9004) y **CB-Taller-Bodega** (9005): el motor los llama con HTTP Connector. Si uno está apagado, la tarea queda como incidente en Cockpit; al encenderlo se reintenta con "Retry".
-   - El banco responde solo cada dispersión 10 s después de recibirla: acepta si la cuenta tiene el formato `000-123` y rechaza si no. La bodega entrega sola el repuesto pedido 10 s después. Para responder a mano: `PUT /api/simulacion` con `{"respuestaAutomatica": false}` y luego `POST /api/dispersiones/{id}/aceptar|rechazar` o `POST /api/solicitudes-repuesto/{id}/entregar`.
-   - Vehículos de prueba en la bodega: `CB0TEST0000000001` (con campaña RECALL-CAMARA-2026), `WDB0000000000000B`, `WDB0000000000000C` y `WDB0000000000000D`.
-5. Worker de TI (mientras se reemplaza por Connectors en la Fase 4): abre `corocora-benz-embebida/workers/iniciar-workers.bat` y deja la ventana abierta. Lo demás ya lo hace el motor: nómina y notificaciones con JavaDelegates, banco y taller con HTTP Connector.
-   Correos: por defecto solo se escriben en el log del motor. Para enviarlos de verdad, corre un SMTP local como [Mailpit](https://mailpit.axllent.org/) (bandeja en http://localhost:8025) y arranca el motor con la variable `CORREO_HABILITADO=true`.
-6. Entra a:
-   - Swagger: http://localhost:9000/swagger-ui.html
-   - Tasklist: http://localhost:9000/camunda/app/tasklist/ (usuario `demo`, clave `demo`)
-   - Cockpit: http://localhost:9000/camunda/app/cockpit/
+```powershell
+java -jar cb-bpm-engine/target/cb-bpm-engine-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+java -jar cb-portal-cliente/target/cb-portal-cliente-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+java -jar cb-portal-ti/target/cb-portal-ti-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+java -jar cb-central-sys/target/cb-central-sys-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+java -jar cb-banco/target/cb-banco-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+java -jar cb-taller-bodega/target/cb-taller-bodega-1.0.0-SNAPSHOT.jar --spring.profiles.active=h2
+```
 
-Para confirmar la solución en el proceso de TI entra a Tasklist con `USR-01` / `USR-01` (se crea solo).
+Sin el argumento del perfil se usa PostgreSQL. Arranca los seis servicios para recorrer todos los procesos. Por defecto escuchan solo en `127.0.0.1`; `SERVER_ADDRESS` permite cambiar la interfaz de escucha. Las URLs de integración se configuran con `ENGINE_REST_URL`, `PORTAL_TI_URL`, `BANCO_URL` y `TALLER_BODEGA_URL`. Las notificaciones se registran en el log; `CORREO_HABILITADO=true` activa SMTP, configurable mediante `MAIL_HOST` y `MAIL_PORT`.
 
-Si repites una `businessKey`, usa otra o borra la instancia; si no, los eventos de Swagger dan error 500.
+- Portal del cliente: http://localhost:9001
+- Mesa de ayuda TI: http://localhost:9002
+- CentralSys: http://localhost:9003
+- Swagger y Cockpit: http://localhost:9000/swagger-ui.html y http://localhost:9000/camunda/app/cockpit/ (`demo` / `demo`)
 
-## Cómo iniciar cada proceso
+En CentralSys elige el grupo correspondiente, reclama y completa su tarea. Desde el portal TI se reporta y confirma la solución usando el mismo identificador de usuario. El portal de clientes usa el nombre para consultar solicitudes y responder cotizaciones pendientes. Form-js se sirve localmente desde CentralSys; no requiere conexión a Internet para cargar los formularios.
 
-Los nombres que salen en Tasklist (Start process):
+**Entorno de demostración:** la selección de usuario y grupo no implementa autenticación ni aislamiento de datos. No exponer estos servicios ni usar datos reales sin agregar controles de acceso, protección de datos y configuración de producción.
 
-- **Corocora Benz - Gestión de Incidentes TI**: desde Tasklist o Swagger `POST /api/demo/processes/ti`
-- **Corocora Benz - Gestión de Nómina**: desde Tasklist o Swagger `POST /api/demo/processes/nomina`
-- **Corocora Benz - Postventa y Garantías**: desde Swagger `POST /api/demo/processes/postventa` (arranca con el mensaje `SolicitudServicio`)
-
-En Swagger los datos de ejemplo ya vienen puestos: solo *Try it out* y *Execute*. Las tareas de personas se hacen en Tasklist: abrir la tarea, **Claim**, llenar, **Complete**. Las respuestas externas (cliente, bodega, banco) se mandan desde Swagger, en "Eventos externos", con la misma `businessKey`.
-
-## Qué hace cada proceso y qué llenar
-
-**Gestión de Incidentes TI.** Se reporta un incidente, una tabla DMN calcula prioridad y plazo, la mesa de servicio lo asigna, soporte lo resuelve (subproceso Resolución Técnica TI) y el usuario confirma. Si se vence el plazo pasa a revisión; si el usuario no responde en 24 h se cierra solo.
-Para llenar: Usuario `USR-01`, sistema ERP, impacto Medio, urgencia Media, equipos `1`. En el triaje elegir Soporte TI Nivel 1. Diagnóstico: cualquier texto. Confirmar como `USR-01` marcando la casilla.
-
-**Postventa y Garantías.** Llega una solicitud del cliente, se consulta el VIN, una tabla DMN decide si cubre campaña, garantía o si hay que cotizar. Si el cliente acepta, se reservan repuestos y se agenda cita en paralelo, el taller repara (subproceso Orden de Taller) y se entrega el vehículo. Si el cliente rechaza o no responde en 48 h, se cierra sin reparar.
-Para llenar: taller Bogotá Norte. En revisar cobertura dejar sin marcar la aprobación y poner cualquier justificación. Enviar `cotizacion-aceptada/POST-DEMO-001` desde Swagger. Cita `2026-11-20 09:00`, orden `OT-001`. Diagnóstico y trabajo: cualquier texto, costo `350000`. Si marcas "Requiere repuesto adicional", CB-Taller-Bodega lo entrega solo a los 10 s. Marcar inspección aprobada. Satisfacción `5`.
-
-**Gestión de Nómina.** Se abre el periodo, se recogen las novedades de los empleados, una tabla DMN revisa periodo, soportes y fecha de corte, cada novedad se valida (subproceso Validación de Novedad), se calcula y aprueba la liquidación, se envía el lote al banco y se espera su respuesta.
-Para llenar: periodo `2026-11`, ciclo MENSUAL, corte 30/11/2026. Marcar "Novedad válida" en las dos novedades, "Liquidación consistente" y "Aprobar liquidación" (motivo `Aprobada`). Lote `LOTE-001`, cuenta `000-123`. CB-Banco recibe el lote y a los 10 s responde solo con la dispersión aceptada; con una cuenta mal escrita (por ejemplo `123`) la rechaza y vuelve a Tesorería.
+El banco acepta una cuenta con formato `000-123` y rechaza otros formatos; la bodega entrega los repuestos automáticamente después de diez segundos. Los vehículos de muestra incluyen `CB0TEST0000000001` y `WDB0000000000000B`, `WDB0000000000000C`, `WDB0000000000000D`.
 
 ## Pruebas
 
-Con CB-BPM-Engine, CB-Banco, CB-Taller-Bodega y el worker de TI corriendo, desde `corocora-benz-embebida/workers` (la prueba apaga la respuesta automática del banco y la bodega, responde por sus APIs y al final la vuelve a encender):
+Con motor, Portal TI, Banco y Taller-Bodega arrancados, ejecuta `node corocora-benz-embebida/tests/e2e.mjs`. La prueba recorre 12 escenarios y controla temporalmente las respuestas automáticas de banco y bodega. También valida los formularios desplegados y detecta incidentes en el motor. Las pruebas de permisos, identidades y regresión contienen expectativas de seguridad que aún no están implementadas y actualmente fallan; consulta [funcionamiento y límites](docs/FUNCIONAMIENTO-Y-LIMITES.md).
 
-```
-npm run e2e
-```
-
-Debe salir `OK` en los 11 escenarios.
-
-En `docs/` están los PDF de los diagramas y los formularios para facilidad de lectura.
+Integrantes: Sander Farid Sierra Reyes (TI), Miguel Ángel Rincón Morales (Postventa) y Nicolas Alejandro Cabezas Daza (Nómina). Los documentos de referencia están en `docs/`; consulta [funcionamiento y límites](docs/FUNCIONAMIENTO-Y-LIMITES.md) antes de presentar la demostración.

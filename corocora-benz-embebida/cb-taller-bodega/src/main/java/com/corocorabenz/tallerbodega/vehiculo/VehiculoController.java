@@ -1,6 +1,8 @@
 package com.corocorabenz.tallerbodega.vehiculo;
 
 import java.util.LinkedHashMap;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +26,7 @@ public class VehiculoController {
 
   @GetMapping("/{vin}")
   public Map<String, Object> consultar(@PathVariable String vin, @RequestParam(defaultValue = "0") long km) {
+    if (!vin.matches("[A-HJ-NPR-Z0-9]{17}") || km < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "VIN o kilometraje inválido");
     Vehiculo v = repository.findById(vin).orElse(null);
     String campana = v != null ? v.getCampanaActiva() : null;
     Map<String, Object> r = new LinkedHashMap<>();
@@ -31,7 +34,7 @@ public class VehiculoController {
     r.put("registrado", v != null);
     r.put("modelo", v != null ? v.getModelo() : null);
     r.put("historyRecordId", "HIST-" + vin);
-    r.put("warrantyEligible", km <= GARANTIA_MAX_KM);
+    r.put("warrantyEligible", v != null && km <= GARANTIA_MAX_KM);
     r.put("campaignActive", campana != null);
     r.put("campaignId", campana);
     return r;

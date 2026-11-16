@@ -1,5 +1,9 @@
 package com.corocorabenz.tallerbodega.repuesto;
 
+import com.corocorabenz.tallerbodega.motor.MotorClient;
+import com.corocorabenz.tallerbodega.simulacion.Simulacion;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -29,25 +33,47 @@ public class RepuestoController {
   private final ReservaRepository reservas;
   private final SolicitudRepuestoRepository solicitudes;
   private final BodegaService bodega;
+  private final Simulacion simulacion;
+  private final MotorClient motor;
 
-  public RepuestoController(ReservaRepository reservas, SolicitudRepuestoRepository solicitudes, BodegaService bodega) {
+  public RepuestoController(ReservaRepository reservas, SolicitudRepuestoRepository solicitudes, BodegaService bodega, Simulacion simulacion, MotorClient motor) {
     this.reservas = reservas;
     this.solicitudes = solicitudes;
-    this.bodega = bodega;
+    this.bodega = bodega; this.simulacion = simulacion; this.motor = motor;
   }
 
-  public record NuevaReserva(String businessKey, String vin) {}
+  public record NuevaReserva(@NotBlank String businessKey, @NotBlank String vin) {}
 
   @PostMapping("/api/reservas")
-  public ResponseEntity<Map<String, Object>> reservar(@RequestBody NuevaReserva nueva) {
+  public synchronized ResponseEntity<Map<String, Object>> reservar(@Valid @RequestBody NuevaReserva nueva) {
+    var previa = reservas.findFirstByBusinessKeyOrderByIdDesc(nueva.businessKey());
+    if (previa.isPresent()) {
+      Reserva anterior = previa.get();
+      if (!nueva.vin().equals(anterior.getVin())) return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "La solicitud ya tiene una reserva de otro vehículo"));
+      return ResponseEntity.ok(Map.of("reservationId", anterior.getId(), "partsReservationStatus", anterior.getEstado()));
+    }
     Reserva r = new Reserva();
     r.setBusinessKey(nueva.businessKey());
     r.setVin(nueva.vin());
+    r.setEstado(simulacion.isRepuestosDisponibles() ? "RESERVED" : "PENDIENTE");
     r = reservas.save(r);
     LOG.info("Repuestos reservados para el vehículo {} (reserva {}, proceso {})", r.getVin(), r.getId(),
         r.getBusinessKey());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(Map.of("reservationId", r.getId(), "partsReservationStatus", r.getEstado()));
+  }
+
+  /** Simula el aviso de Bodega: la instancia solo continúa si está esperando el mensaje. */
+  @PostMapping("/api/reservas/{id}/disponibles")
+  public synchronized ResponseEntity<?> avisarDisponibilidad(@PathVariable Long id) {
+    Reserva reserva = reservas.findById(id).orElse(null);
+    if (reserva == null) return ResponseEntity.notFound().build();
+    if ("RESERVED".equals(reserva.getEstado())) return ResponseEntity.ok(reserva);
+    if (!"PENDIENTE".equals(reserva.getEstado())) return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Estado de reserva no válido"));
+    if (!motor.enviarMensaje("RepuestosDisponibles", reserva.getBusinessKey(), Map.of("partsReservationStatus", "RESERVED")))
+      return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "El proceso todavía no espera el aviso de Bodega"));
+    reserva.setEstado("RESERVED"); reservas.save(reserva);
+    return ResponseEntity.ok(reserva);
   }
 
   @GetMapping("/api/reservas")

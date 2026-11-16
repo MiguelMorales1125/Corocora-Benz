@@ -26,5 +26,6 @@ public class Reserva {
   public String getVin() { return vin; }
   public void setVin(String vin) { this.vin = vin; }
   public String getEstado() { return estado; }
+  public void setEstado(String estado) { this.estado = estado; }
   public Instant getCreadaEn() { return creadaEn; }
 }

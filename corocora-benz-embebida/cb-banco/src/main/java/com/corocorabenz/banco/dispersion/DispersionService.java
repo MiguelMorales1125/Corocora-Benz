@@ -40,7 +40,13 @@ public class DispersionService {
       Long payrollTotal, String payPeriodId) {}
 
   @Transactional
-  public Dispersion recibir(NuevaDispersion nueva) {
+  public synchronized Dispersion recibir(NuevaDispersion nueva) {
+    for (Dispersion existente : repository.findByBusinessKeyOrderByIdDesc(nueva.businessKey())) {
+      if ((existente.getEstado() == EstadoDispersion.RECIBIDA || existente.getEstado() == EstadoDispersion.ACEPTADA) && java.util.Objects.equals(existente.getPaymentBatchId(), nueva.paymentBatchId())
+          && java.util.Objects.equals(existente.getBankAccount(), nueva.bankAccount())
+          && java.util.Objects.equals(existente.getPayrollTotal(), nueva.payrollTotal())
+          && java.util.Objects.equals(existente.getPayPeriodId(), nueva.payPeriodId())) return existente;
+    }
     // Si el proceso reenvía el lote, la dispersión anterior sin responder ya no aplica.
     for (Dispersion anterior : repository.findByBusinessKeyAndEstado(nueva.businessKey(), EstadoDispersion.RECIBIDA)) {
       anterior.setEstado(EstadoDispersion.REEMPLAZADA);
@@ -81,9 +87,8 @@ public class DispersionService {
       LOG.info("Dispersión {} {} ({})", d.getId(), estado, codigo);
     } else {
       d.setIntentosRespuesta(d.getIntentosRespuesta() + 1);
-      if (d.getIntentosRespuesta() >= MAX_INTENTOS) {
-        d.setEstado(EstadoDispersion.SIN_PROCESO);
-        LOG.warn("Dispersión {}: el proceso {} nunca esperó la respuesta", d.getId(), d.getBusinessKey());
+      if (d.getIntentosRespuesta() % MAX_INTENTOS == 0) {
+        LOG.warn("No fue posible entregar la respuesta al motor; se volverá a intentar");
       }
     }
     repository.save(d);

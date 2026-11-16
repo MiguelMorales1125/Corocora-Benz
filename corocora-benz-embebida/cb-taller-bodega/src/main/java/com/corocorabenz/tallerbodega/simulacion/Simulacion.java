@@ -13,6 +13,7 @@ public class Simulacion {
 
   private volatile boolean respuestaAutomatica;
   private volatile int retardoSegundos;
+  private volatile boolean repuestosDisponibles = true;
 
   public Simulacion(@Value("${corocora.simulacion.respuesta-automatica:true}") boolean respuestaAutomatica,
       @Value("${corocora.simulacion.retardo-segundos:10}") int retardoSegundos) {
@@ -20,6 +21,8 @@ public class Simulacion {
     this.retardoSegundos = retardoSegundos;
   }
 
+  public boolean isRepuestosDisponibles() { return repuestosDisponibles; }
+  public void setRepuestosDisponibles(boolean disponible) { repuestosDisponibles = disponible; }
   public boolean isRespuestaAutomatica() { return respuestaAutomatica; }
   public void setRespuestaAutomatica(boolean respuestaAutomatica) { this.respuestaAutomatica = respuestaAutomatica; }
   public int getRetardoSegundos() { return retardoSegundos; }

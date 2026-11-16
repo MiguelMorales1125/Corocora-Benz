@@ -42,9 +42,8 @@ public class BodegaService {
           s.getBusinessKey());
     } else {
       s.setIntentosRespuesta(s.getIntentosRespuesta() + 1);
-      if (s.getIntentosRespuesta() >= MAX_INTENTOS) {
-        s.setEstado(SolicitudRepuesto.Estado.SIN_PROCESO);
-        LOG.warn("Solicitud {}: el proceso {} nunca esperó el repuesto", s.getPartRequestId(), s.getBusinessKey());
+      if (s.getIntentosRespuesta() % MAX_INTENTOS == 0) {
+        LOG.warn("No fue posible entregar la respuesta al motor; se volverá a intentar");
       }
     }
     repository.save(s);

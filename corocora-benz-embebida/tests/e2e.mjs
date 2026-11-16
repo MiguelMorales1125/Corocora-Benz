@@ -1,23 +1,26 @@
 // Pruebas punta a punta contra Camunda REST (CB-BPM-Engine).
-// Requisitos: CB-BPM-Engine (9000), CB-Banco (9004) y CB-Taller-Bodega (9005) corriendo, y el
-// worker de TI (npm run ti). Las tareas humanas se completan por REST con las variables de sus
-// formularios (Camunda Forms o generados). El Banco y la Bodega responden por sus propias APIs
+// Requisitos: CB-BPM-Engine (9000), CB-PortalTI (9002), CB-Banco (9004) y
+// CB-Taller-Bodega (9005) corriendo. Las tareas humanas se completan por REST con las variables
+// de sus Camunda Forms. El Banco y la Bodega responden por sus propias APIs
 // (la prueba apaga su respuesta automática y responde a mano); Cliente y usuario TI se simulan
 // correlacionando mensajes, y los temporizadores se disparan ejecutando su job.
 // Uso: npm run e2e
 const B = process.env.CAMUNDA_REST_URL || 'http://localhost:9000/engine-rest';
 const BANCO = process.env.BANCO_URL || 'http://localhost:9004';
 const BODEGA = process.env.TALLER_BODEGA_URL || 'http://localhost:9005';
+const TI = process.env.PORTAL_TI_URL || 'http://localhost:9002';
+// Credencial de integración: las API internas rechazan llamadas sin este encabezado.
+const INTERNAL = process.env.COROCORA_INTERNAL_TOKEN || 'cb-local-interno-demo';
 const RUN = process.env.RUN_ID || Date.now().toString(36);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
-const formsSeen = { camunda: new Set(), generated: new Set() };
+const formsSeen = { camunda: new Set() };
 let current;
 
 async function api(method, path, body, base = B) {
   const r = await fetch(base + path, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CB-Internal': INTERNAL },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const t = await r.text();
@@ -29,6 +32,31 @@ async function api(method, path, body, base = B) {
   if (!t) return null;
   try { return JSON.parse(t); } catch { return t; }
 }
+
+// Los procesos pueden tardar varios segundos en desplegar el motor y sus modelos.
+async function waitForService(base, path, name, timeoutMs = 60000) {
+  const start = Date.now();
+  let last;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const response = await fetch(base + path, {
+        headers: { 'X-CB-Internal': INTERNAL },
+        signal: AbortSignal.timeout(3000)
+      });
+      if (response.ok) return;
+      last = `HTTP ${response.status}`;
+    } catch (error) { last = error.message; }
+    await sleep(500);
+  }
+  throw new Error(`${name} no está listo después de ${timeoutMs / 1000} s: ${last}`);
+}
+
+await Promise.all([
+  waitForService(B, '/version', 'Motor Camunda'),
+  waitForService(TI, '/api/tickets?requesterId=__test__', 'Portal TI'),
+  waitForService(BANCO, '/api/estado', 'Banco'),
+  waitForService(BODEGA, '/api/estado', 'Taller-Bodega')
+]);
 
 function typed(obj) {
   const out = {};
@@ -84,10 +112,7 @@ async function waitTask(bk, key, pick) {
     form = 'camunda-form:' + f.id;
     formsSeen.camunda.add(f.id);
   } else {
-    const html = await api('GET', `/task/${t.id}/rendered-form`);
-    check(typeof html === 'string' && html.includes('<form'), `${key}: formulario generado (camunda:formData) renderiza`);
-    form = 'generated';
-    formsSeen.generated.add(key);
+    throw new Error(`${key}: falta un Camunda Form desplegado`);
   }
   const fv = await api('GET', `/task/${t.id}/form-variables`);
   const v = Object.fromEntries(Object.entries(fv).map(([k, x]) => [k, x.value]));
@@ -213,9 +238,12 @@ async function scenario(name, fn) {
 }
 
 // El Banco y la Bodega responden solos después de unos segundos; en la prueba se responde a mano.
+const estadoBanco = await api('GET', '/api/simulacion', undefined, BANCO);
+const estadoBodega = await api('GET', '/api/simulacion', undefined, BODEGA);
 const simulacionManual = { respuestaAutomatica: false };
+try {
 await api('PUT', '/api/simulacion', simulacionManual, BANCO);
-await api('PUT', '/api/simulacion', simulacionManual, BODEGA);
+await api('PUT', '/api/simulacion', { ...simulacionManual, repuestosDisponibles: true }, BODEGA);
 
 // ---------------------------------------------------------------- Postventa
 async function startPostventa(bk, vin, mileageKm) {
@@ -274,6 +302,8 @@ await scenario('Postventa B: fuera de garantía, cotización rechazada', async (
   await correlate('CotizacionRechazada', bk);
   const pi = await waitEnd(bk, 'CB_PostventaGarantias', 'unauthorizedEnd');
   check((await variable(pi.id, 'coverageStatus')) === 'REQUIERE_COTIZACION', 'DMN = REQUIERE_COTIZACION (80.000 km)');
+  const cotizaciones = await api('GET', `/api/cotizaciones?businessKey=${encodeURIComponent(bk)}`, undefined, BODEGA);
+  check(cotizaciones[0]?.estado === 'RECHAZADA', 'Bodega refleja la cotización rechazada');
   const quoteId = await variable(pi.id, 'quoteId');
   check(String(quoteId).startsWith('COT-') && (await variable(pi.id, 'quoteAmount')) === 850000, `cotización ${quoteId} creada en CB-Taller-Bodega`);
 });
@@ -285,6 +315,8 @@ await scenario('Postventa C: garantía no aprobada, cotización aceptada, repues
   check(rw.v.coverageStatus === 'CUBIERTO_POR_GARANTIA', 'DMN = CUBIERTO_POR_GARANTIA');
   await complete(rw, { coverageApproved: false, warrantyNote: 'Daño por mal uso' });
   await correlate('CotizacionAceptada', bk);
+  const aceptadas = await api('GET', `/api/cotizaciones?businessKey=${encodeURIComponent(bk)}`, undefined, BODEGA);
+  check(aceptadas[0]?.estado === 'ACEPTADA', 'Bodega refleja la cotización aceptada');
   await workshop(bk, { partNeeded: true });
   await waitEnd(bk, 'CB_PostventaGarantias', 'closedEnd');
 });
@@ -295,6 +327,38 @@ await scenario('Postventa D: cotización sin respuesta, vence el timer de 48 h',
   check(hoursUntil(await timerJob(bk, 'quoteExpired')) === 48, 'timer de cotización a 48 h');
   await fireTimer(bk, 'quoteExpired');
   await waitEnd(bk, 'CB_PostventaGarantias', 'unauthorizedEnd');
+  const vencidas = await api('GET', `/api/cotizaciones?businessKey=${encodeURIComponent(bk)}`, undefined, BODEGA);
+  check(vencidas[0]?.estado === 'VENCIDA', 'Bodega refleja la cotización vencida');
+});
+
+await scenario('Postventa E: Bodega avisa cuando el repuesto vuelve a estar disponible', async () => {
+  const bk = `PV-E-${RUN}`;
+  await api('PUT', '/api/simulacion', {repuestosDisponibles:false}, BODEGA);
+  try {
+    await startPostventa(bk, 'CB0TEST0000000001', 15000);
+    const rw = await waitTask(bk, 'reviewWarranty');
+    await complete(rw, { coverageApproved: true, warrantyNote: 'Campaña' });
+    const pending = await until(async () => {
+      const list = await api('GET', '/api/reservas', undefined, BODEGA);
+      const r = list.find(x => x.businessKey === bk);
+      return r && r.estado === 'PENDIENTE' ? r : null;
+    }, `reserva pendiente (${bk})`);
+    await until(async () => {
+      const root = (await instances(bk))[0];
+      if (!root) return null;
+      const subscriptions = await api('GET', `/execution?processInstanceId=${root.id}&messageEventSubscriptionName=RepuestosDisponibles`);
+      return subscriptions.length ? subscriptions[0] : null;
+    }, `mensaje RepuestosDisponibles (${bk})`);
+    check((await tasks(bk, 'diagnoseVehicle')).length === 0, 'el taller no inicia mientras falta el repuesto');
+    const delivered = await api('POST', `/api/reservas/${pending.id}/disponibles`, undefined, BODEGA);
+    check(delivered.estado === 'RESERVED', 'Bodega correlacionó el aviso y actualizó la reserva');
+    const duplicate = await api('POST', `/api/reservas/${pending.id}/disponibles`, undefined, BODEGA);
+    check(duplicate.estado === 'RESERVED', 'el aviso repetido es idempotente');
+    await workshop(bk);
+    await waitEnd(bk, 'CB_PostventaGarantias', 'closedEnd');
+  } finally {
+    await api('PUT', '/api/simulacion', {repuestosDisponibles:true}, BODEGA);
+  }
 });
 
 // ---------------------------------------------------------------- TI
@@ -321,9 +385,14 @@ await scenario('TI A: P3, Nivel 1, usuario confirma', async () => {
   check(hoursUntil(await timerJob(bk, 'slaTimer')) === 24, 'timer de resolución a 24 h');
   await resolve(bk, 'resolveN1');
   const confirmation = await waitTask(bk, 'confirmSolution');
+  const tickets = await api('GET', '/api/tickets?requesterId=usuario.prueba', undefined, TI);
+  const ticket = tickets.find(t => t.businessKey === bk);
+  check(ticket && ticket.status === 'RESOLVED' && ticket.resolutionSummary === 'Actualización OTA aplicada', 'Portal TI guarda la solución');
   await complete(confirmation, { userConfirmed: true });
   const pi = await waitEnd(bk, 'CB_GestionIncidenteTI', 'incidentEnd');
   check((await variable(pi.id, 'ticketStatus')) === 'CLOSED', 'ticket cerrado');
+  const cerrados = await api('GET', '/api/tickets?requesterId=usuario.prueba', undefined, TI);
+  check(cerrados.find(t => t.businessKey === bk)?.status === 'CLOSED', 'Portal TI registra el cierre');
 });
 
 await scenario('TI B: P1 por seguridad, vence el plazo, usuario rechaza y luego no responde', async () => {
@@ -342,6 +411,9 @@ await scenario('TI B: P1 por seguridad, vence el plazo, usuario rechaza y luego 
   await resolve(bk, 'resolveSpecialist');
   const rejected = await waitTask(bk, 'confirmSolution');
   await complete(rejected, { userConfirmed: false });
+  await waitTask(bk, 'resolveSpecialist');
+  const reabiertos = await api('GET', '/api/tickets?requesterId=usuario.prueba', undefined, TI);
+  check(reabiertos.find(t => t.businessKey === bk)?.status === 'OPEN', 'Portal TI refleja la reapertura');
   await resolve(bk, 'resolveSpecialist');
   check(hoursUntil(await timerJob(bk, 'noResponse')) === 24, 'espera de confirmación a 24 h');
   await fireTimer(bk, 'noResponse');
@@ -397,7 +469,7 @@ async function payAndClose(bk, { loops = false } = {}) {
   await complete(ap, { payrollApproved: true, approvalReason: 'Aprobada' });
   const pb = await waitTask(bk, 'prepareBankBatch');
   check(pb.v.payrollTotal === 1000000, 'Tesorería ve el total aprobado');
-  await complete(pb, { paymentBatchId: `LOTE-${bk}`, bankAccount: '000-123' });
+  await complete(pb, { paymentBatchId: `LOTE-${bk}`, bankAccount: loops ? 'cuenta-invalida' : '000-123' });
   if (loops) {
     check(hoursUntil(await timerJob(bk, 'bankTimeout')) === 2, 'timer bancario a 2 h');
     await fireTimer(bk, 'bankTimeout');
@@ -406,10 +478,10 @@ async function payAndClose(bk, { loops = false } = {}) {
     await bancoResponde(bk, 'rechazar', { codigo: 'R03-CUENTA-INVALIDA' });
     fx = await waitTask(bk, 'fixBankBatch');
     check(fx.v.bankResponseCode === 'R03-CUENTA-INVALIDA', 'Tesorería ve el código de rechazo de CB-Banco');
-    await complete(fx, { paymentBatchId: `LOTE-${bk}`, correction: 'Cuenta corregida' });
+    await complete(fx, { paymentBatchId: `LOTE-${bk}`, bankAccount: '000-123', correction: 'Cuenta corregida' });
   }
   const d = await bancoResponde(bk, 'aceptar');
-  check(d.paymentBatchId === `LOTE-${bk}` && d.payrollTotal === 1000000, 'CB-Banco recibió el lote y el total por HTTP Connector');
+  check(d.paymentBatchId === `LOTE-${bk}` && d.payrollTotal === 1000000 && d.bankAccount === '000-123', 'CB-Banco recibió el lote, el total y la cuenta corregida por HTTP Connector');
   const pi = await waitEnd(bk, 'CB_GestionNomina', 'payrollEnd');
   check(String(await variable(pi.id, 'bankReference')).startsWith('BANCO-'), 'referencia bancaria devuelta por CB-Banco');
   return pi;
@@ -461,13 +533,15 @@ for (const [label, extra, setup] of [
 }
 
 // ---------------------------------------------------------------- resumen
-const simulacionAutomatica = { respuestaAutomatica: true };
-await api('PUT', '/api/simulacion', simulacionAutomatica, BANCO);
-await api('PUT', '/api/simulacion', simulacionAutomatica, BODEGA);
+} finally {
+  await Promise.all([
+    api('PUT', '/api/simulacion', estadoBanco, BANCO),
+    api('PUT', '/api/simulacion', estadoBodega, BODEGA)
+  ]);
+}
 const incidents = await api('GET', '/incident');
 const open = await api('GET', `/process-instance?businessKeyLike=%25${RUN}`);
 const totalChecks = results.reduce((s, r) => s + r.checks.length, 0);
 console.log(`\nVerificaciones: ${totalChecks}; formularios Camunda usados: ${[...formsSeen.camunda].sort().join(', ')}`);
-console.log(`Formularios generados usados: ${[...formsSeen.generated].sort().join(', ')}`);
 console.log(`Incidentes en el engine: ${incidents.length}; instancias de prueba activas: ${open.length}`);
-process.exit(results.every((r) => r.ok) && !incidents.length ? 0 : 1);
+process.exit(results.every((r) => r.ok) && !incidents.length && !open.length ? 0 : 1);

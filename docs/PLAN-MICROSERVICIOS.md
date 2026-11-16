@@ -79,9 +79,9 @@ Los mensajes que hoy se simulan en Swagger los mandan sistemas reales:
 - [x] **F1. Estructura:** Maven multi-módulo con los 6 módulos; `backend` pasa a `cb-bpm-engine` en el puerto 9000 con Postgres (o perfil `h2`) y CORS abierto para las webs.
 - [x] **F2. Motor:** JavaDelegates de nómina y notificaciones; correo real (Mailpit) o log.
 - [x] **F3. APIs externas:** Banco y Taller-Bodega con sus tablas y respuestas asíncronas; cambiar sus topics en los BPMN a `http-connector`.
-- [ ] **F4. PortalTI:** API de tickets + vistas; cambiar los topics `ti.*` a `http-connector`.
-- [ ] **F5. PortalCliente:** vistas y mensajes.
-- [ ] **F6. CentralSys:** bandejas por departamento con form-js; convertir los 12 formularios generados (dentro de los BPMN) a `.form`.
-- [ ] **F7. Cierre:** quitar los workers JS, adaptar `e2e.mjs`, actualizar README y diagrama de arquitectura.
+- [x] **F4. PortalTI:** API de tickets + vistas; cambiar los topics `ti.*` a `http-connector`.
+- [x] **F5. PortalCliente:** vistas y mensajes.
+- [x] **F6. CentralSys:** bandejas por departamento con form-js; convertir los 12 formularios generados (dentro de los BPMN) a `.form`.
+- [x] **F7. Cierre:** quitar los workers JS, adaptar `e2e.mjs`, actualizar README y diagrama de arquitectura.
 
 Regla para los modelos: todo cambio a un `.bpmn`, `.dmn` o `.form` se hace en la carpeta raíz (`bpmn/`, `dmn/`, `form/`) **y** en `cb-bpm-engine/src/main/resources/static.*`. Las dos copias deben quedar idénticas.

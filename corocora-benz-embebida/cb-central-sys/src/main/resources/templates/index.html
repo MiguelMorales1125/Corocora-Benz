@@ -1,20 +1,11 @@
-<!doctype html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Central Corocora Benz · Corocora Benz</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container">
-      <span class="navbar-brand">Corocora Benz · Central Corocora Benz</span>
-    </div>
-  </nav>
-  <main class="container py-5">
-    <h1 class="h3">Central Corocora Benz</h1>
-    <p class="text-secondary">Bandeja de tareas de cada departamento.</p>
-  </main>
-</body>
-</html>
+<!doctype html><html lang="es" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CentralSys · Corocora Benz</title><link rel="stylesheet" href="/vendor/form-js/form-js.css"><style>body{font:16px/1.5 system-ui;margin:0;background:#f3f6f8;color:#182634}header{background:#182634;color:white;padding:1rem max(1rem,calc((100% - 1050px)/2))}main{max-width:1050px;margin:auto;padding:2rem 1rem}section{background:white;border:1px solid #d5dfe5;border-radius:10px;padding:1.5rem;margin:1rem 0}label{display:inline-grid;gap:.3rem;margin:.5rem}input,select,button{font:inherit;padding:.65rem;border:1px solid #9aadb9;border-radius:5px}button{background:#075d72;color:white;border:0;cursor:pointer;min-height:44px}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d58c1d}li{padding:.8rem;border-bottom:1px solid #ddd}#message{white-space:pre-wrap}</style></head><body><header><strong>Corocora Benz</strong> / CentralSys</header><main><h1>Bandeja de trabajo</h1><p><strong>Demostración:</strong> nómina, banco y datos de empleados son simulados. No se realizan pagos reales. Con H2 en memoria, los datos se pierden al reiniciar cada servicio.</p><p>Selecciona tu grupo y abre una tarea para revisar su formulario.</p><p id="message" role="status" aria-live="polite"></p><section><p id="groups"></p><button id="refresh" type="button">Consultar bandeja</button><ul id="tasks"></ul></section><section id="taskPanel" hidden><h2 id="taskTitle"></h2><div id="form"></div><button id="submit">Completar tarea</button></section><section><h2>Iniciar nómina</h2><form id="payroll"><label>Periodo<input name="payPeriodId" value="2026-11-Q2" required></label><label>Ciclo<select name="payCycle"><option>QUINCENAL</option><option>MENSUAL</option></select></label><label>Fecha de corte<input type="date" name="cutoffDate" required></label><button>Iniciar ciclo</button></form></section></main><script src="/vendor/form-js/form-viewer.umd.js"></script><script th:inline="javascript">const engine=/*[[${engineRest}]]*/ 'http://localhost:9000/engine-rest';</script><script src="/auth.js"></script><script th:inline="none">
+const message=document.querySelector('#message');let viewer,currentTask,currentUser;
+const typed=o=>Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined).map(([k,v])=>[k,{value:v,type:v===null?'Null':typeof v==='boolean'?'Boolean':typeof v==='number'?(Number.isInteger(v)?'Long':'Double'):'String'}]));
+function show(e){message.textContent=typeof e==='string'?e:e.message||'No fue posible completar la operación.'}
+async function refresh(){const list=document.querySelector('#tasks');list.replaceChildren();for(const t of await CB.request('/central/tasks')){const li=document.createElement('li');li.append(document.createTextNode(t.name+' '));const button=document.createElement('button');button.textContent=t.assignee?'Abrir':'Reclamar y abrir';button.onclick=()=>openTask(t).catch(show);li.append(button);list.append(li)}if(!list.children.length)list.textContent='No hay tareas pendientes.'}
+async function openTask(t){const claimed=!t.assignee;if(claimed)await CB.post('/central/tasks/'+t.id+'/claim',{});try{const [schema,vars,scope]=await Promise.all(['deployed-form','form-variables','variables'].map(k=>CB.request('/central/tasks/'+t.id+'/'+k)));if(t.taskDefinitionKey==='fixBankBatch')schema.components.push({id:'Field_bankAccountCorrection',key:'bankAccount',label:'Cuenta de origen corregida',type:'textfield',validate:{required:true}});if(t.taskDefinitionKey==='deliverVehicle'){const field=schema.components.find(x=>x.key==='customerSatisfaction');if(field)field.validate.max=5}for(const component of schema.components||[])if(!component.disabled)delete component.defaultValue;const data=Object.fromEntries(Object.entries({...scope,...vars}).map(([k,v])=>[k,v.value]));if(viewer)viewer.destroy();viewer=new FormViewer.Form({container:document.querySelector('#form')});await viewer.importSchema(schema,data);currentTask=t;document.querySelector('#taskTitle').textContent=t.name;document.querySelector('#taskPanel').hidden=false;document.querySelector('#taskPanel').scrollIntoView()}catch(e){if(claimed)try{await CB.post('/central/tasks/'+t.id+'/unclaim',{})}catch{}throw e}}
+document.querySelector('#refresh').onclick=()=>refresh().catch(show);
+document.querySelector('#submit').onclick=async()=>{try{const result=await viewer.submit();if(Object.keys(result.errors||{}).length){show('Revisa los campos señalados.');return}const response=await CB.post('/central/tasks/'+currentTask.id+'/complete',{variables:typed(result.data)});document.querySelector('#taskPanel').hidden=true;show(response.assigned===false?'Tarea completada; no se pudo asignar al responsable.':'Tarea completada.');await refresh()}catch(e){show(e)}};
+document.querySelector('#payroll').onsubmit=async e=>{e.preventDefault();try{await CB.post('/central/nomina',Object.fromEntries(new FormData(e.target)));show('Ciclo de nómina iniciado.');await refresh()}catch(err){show(err)}};
+window.addEventListener('cb-auth-ready',e=>{currentUser=e.detail;document.querySelector('#groups').textContent='Grupos: '+(currentUser.groups.join(', ')||'ninguno');document.querySelector('#payroll').closest('section').hidden=!currentUser.groups.includes('analistas-nomina')&&currentUser.user!=='demo';if(currentUser.cliente){document.querySelector('#tasks').textContent='Esta cuenta es de cliente.';return}refresh().catch(show)});
+</script></body></html>
