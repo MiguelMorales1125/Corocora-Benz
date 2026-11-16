@@ -103,7 +103,7 @@
     <bpmn:endEvent id="payrollEnd" name="Nómina pagada y comprobantes emitidos">
       <bpmn:incoming>Flow_33</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:serviceTask id="createReceipts" name="Generar comprobantes de pago" camunda:type="external" camunda:topic="nomina.generarComprobantes">
+    <bpmn:serviceTask id="createReceipts" name="Generar comprobantes de pago" camunda:delegateExpression="${generarComprobantesDelegate}">
       <bpmn:incoming>Flow_33</bpmn:incoming>
       <bpmn:outgoing>Flow_38</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -135,7 +135,7 @@
       <bpmn:incoming>Flow_35</bpmn:incoming>
       <bpmn:outgoing>Flow_36</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="recordPayment" name="Registrar pago y cerrar periodo" camunda:type="external" camunda:topic="nomina.registrarPago">
+    <bpmn:serviceTask id="recordPayment" name="Registrar pago y cerrar periodo" camunda:delegateExpression="${registrarPagoDelegate}">
       <bpmn:incoming>Flow_32</bpmn:incoming>
       <bpmn:outgoing>Flow_33</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -162,7 +162,25 @@
       <bpmn:outgoing>Flow_30</bpmn:outgoing>
       <bpmn:outgoing>Flow_31</bpmn:outgoing>
     </bpmn:eventBasedGateway>
-    <bpmn:serviceTask id="sendBankBatch" name="Enviar dispersión al Banco" camunda:type="external" camunda:topic="nomina.enviarDispersion">
+    <bpmn:serviceTask id="sendBankBatch" name="Enviar dispersión al Banco" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">${sistemas.banco}/api/dispersiones</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">${json.cuerpo(execution, 'paymentBatchId,bankAccount,payrollTotal,payPeriodId')}</camunda:inputParameter>
+            <camunda:outputParameter name="paymentBatchSent">${json.booleano(statusCode, response, 'recibida')}</camunda:outputParameter>
+            <camunda:outputParameter name="bankDispersionId">${json.numero(statusCode, response, 'dispersionId')}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_27</bpmn:incoming>
       <bpmn:outgoing>Flow_28</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -237,7 +255,7 @@
       <bpmn:incoming>Flow_15</bpmn:incoming>
       <bpmn:outgoing>Flow_16</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="calculatePayroll" name="Calcular liquidación" camunda:type="external" camunda:topic="nomina.calcularLiquidacion">
+    <bpmn:serviceTask id="calculatePayroll" name="Calcular liquidación" camunda:delegateExpression="${calcularLiquidacionDelegate}">
       <bpmn:incoming>Flow_14</bpmn:incoming>
       <bpmn:outgoing>Flow_15</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -274,7 +292,7 @@
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:serviceTask id="fetchChanges" name="Recolectar novedades del periodo" camunda:type="external" camunda:topic="nomina.obtenerNovedades">
+    <bpmn:serviceTask id="fetchChanges" name="Recolectar novedades del periodo" camunda:delegateExpression="${obtenerNovedadesDelegate}">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:serviceTask>

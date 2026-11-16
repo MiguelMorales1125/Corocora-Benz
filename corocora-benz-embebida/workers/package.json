@@ -3,10 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postventa": "node postventa-worker.js",
     "ti": "node ti-worker.js",
-    "nomina": "node nomina-worker.js",
-    "comun": "node common-worker.js",
     "e2e": "node e2e.mjs"
   },
   "dependencies": {

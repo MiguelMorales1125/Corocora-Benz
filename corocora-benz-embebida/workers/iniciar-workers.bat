@@ -19,10 +19,7 @@ if not exist "node_modules\camunda-external-task-client-js" (
   )
 )
 
-start "Worker Postventa" cmd /k "npm run postventa"
 start "Worker TI" cmd /k "npm run ti"
-start "Worker Nomina" cmd /k "npm run nomina"
-start "Worker Comun" cmd /k "npm run comun"
 
-echo Se abrieron los cuatro workers. Puedes dejar esta ventana abierta o cerrarla.
+echo Se abrio el worker de TI (temporal hasta la Fase 4). Puedes dejar esta ventana abierta o cerrarla.
 endlocal

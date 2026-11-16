@@ -36,7 +36,24 @@
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="requestPart" name="Solicitar repuesto a bodega" camunda:type="external" camunda:topic="postventa.solicitarRepuesto">
+    <bpmn:serviceTask id="requestPart" name="Solicitar repuesto a bodega" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">${sistemas.tallerBodega}/api/solicitudes-repuesto</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">${json.cuerpo(execution, 'vin,partCode')}</camunda:inputParameter>
+            <camunda:outputParameter name="partRequestId">${json.texto(statusCode, response, 'partRequestId')}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
     </bpmn:serviceTask>

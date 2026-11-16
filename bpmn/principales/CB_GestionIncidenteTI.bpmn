@@ -104,7 +104,7 @@
     <bpmn:intermediateThrowEvent id="notifySolution" name="Solución notificada al usuario">
       <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
-      <bpmn:messageEventDefinition id="MessageEventDefinition_SolucionNotificada" messageRef="Message_SolucionNotificada" camunda:type="external" camunda:topic="comun.enviarNotificacion" />
+      <bpmn:messageEventDefinition id="MessageEventDefinition_SolucionNotificada" messageRef="Message_SolucionNotificada" camunda:delegateExpression="${enviarNotificacionDelegate}" />
     </bpmn:intermediateThrowEvent>
     <bpmn:userTask id="confirmSolution" name="Confirmar solución del incidente" camunda:assignee="${requesterId}">
       <bpmn:extensionElements>
@@ -146,7 +146,7 @@
     <bpmn:sequenceFlow id="Flow_17" sourceRef="closeTicket" targetRef="incidentEnd" />
     <bpmn:sequenceFlow id="Flow_18" sourceRef="notifyAutoClose" targetRef="closeAutoTicket" />
     <bpmn:sequenceFlow id="Flow_19" sourceRef="closeAutoTicket" targetRef="autoCloseEnd" />
-    <bpmn:serviceTask id="notifyAutoClose" name="Notificar cierre por falta de respuesta" camunda:type="external" camunda:topic="comun.enviarNotificacion">
+    <bpmn:serviceTask id="notifyAutoClose" name="Notificar cierre por falta de respuesta" camunda:delegateExpression="${enviarNotificacionDelegate}">
       <bpmn:incoming>Flow_15</bpmn:incoming>
       <bpmn:outgoing>Flow_18</bpmn:outgoing>
     </bpmn:serviceTask>

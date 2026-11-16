@@ -2,7 +2,7 @@ import { Client, Variables, logger } from 'camunda-external-task-client-js';
 
 // Worker de Gestión de Incidentes TI. Simula la herramienta de mesa de ayuda.
 const client = new Client({
-  baseUrl: process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest',
+  baseUrl: process.env.CAMUNDA_REST_URL || 'http://localhost:9000/engine-rest',
   asyncResponseTimeout: 10000,
   use: logger
 });

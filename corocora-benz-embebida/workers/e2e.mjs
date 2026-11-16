@@ -1,18 +1,21 @@
-// Pruebas punta a punta contra Camunda REST (por defecto, el backend embebido).
-// Requisitos: el deployment con los 6 BPMN, 3 DMN y 9 Camunda Forms, y los cuatro workers
-// corriendo (npm run postventa / ti / nomina / comun). Las tareas humanas se completan por REST
-// con las variables de sus formularios (Camunda Forms o generados); Cliente, Banco y usuario TI
-// se simulan correlacionando mensajes, y los temporizadores se disparan ejecutando su job.
+// Pruebas punta a punta contra Camunda REST (CB-BPM-Engine).
+// Requisitos: CB-BPM-Engine (9000), CB-Banco (9004) y CB-Taller-Bodega (9005) corriendo, y el
+// worker de TI (npm run ti). Las tareas humanas se completan por REST con las variables de sus
+// formularios (Camunda Forms o generados). El Banco y la Bodega responden por sus propias APIs
+// (la prueba apaga su respuesta automática y responde a mano); Cliente y usuario TI se simulan
+// correlacionando mensajes, y los temporizadores se disparan ejecutando su job.
 // Uso: npm run e2e
-const B = process.env.CAMUNDA_REST_URL || 'http://localhost:8080/engine-rest';
+const B = process.env.CAMUNDA_REST_URL || 'http://localhost:9000/engine-rest';
+const BANCO = process.env.BANCO_URL || 'http://localhost:9004';
+const BODEGA = process.env.TALLER_BODEGA_URL || 'http://localhost:9005';
 const RUN = process.env.RUN_ID || Date.now().toString(36);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 const formsSeen = { camunda: new Set(), generated: new Set() };
 let current;
 
-async function api(method, path, body) {
-  const r = await fetch(B + path, {
+async function api(method, path, body, base = B) {
+  const r = await fetch(base + path, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -109,6 +112,41 @@ async function correlate(name, bk, vars = {}) {
   return r;
 }
 
+// Responde por la API de CB-Banco la dispersión pendiente del proceso (accion: aceptar | rechazar).
+// Reintenta mientras la dispersión no haya llegado o el proceso aún no espere la respuesta (409).
+async function bancoResponde(bk, accion, body) {
+  const d = await until(async () => {
+    const lista = await api('GET', `/api/dispersiones?businessKey=${encodeURIComponent(bk)}`, undefined, BANCO);
+    const pendiente = lista.find((x) => x.estado === 'RECIBIDA');
+    if (!pendiente) return null;
+    try {
+      return await api('POST', `/api/dispersiones/${pendiente.id}/${accion}`, body, BANCO);
+    } catch (e) {
+      if (e.status === 409) return null;
+      throw e;
+    }
+  }, `dispersión por ${accion} en CB-Banco (${bk})`);
+  current.steps.push(`CB-Banco ${accion} dispersión ${d.id}`);
+  return d;
+}
+
+// Entrega por la API de CB-Taller-Bodega el repuesto solicitado por el proceso.
+async function bodegaEntrega(bk) {
+  const s = await until(async () => {
+    const lista = await api('GET', `/api/solicitudes-repuesto?businessKey=${encodeURIComponent(bk)}`, undefined, BODEGA);
+    const pendiente = lista.find((x) => x.estado === 'SOLICITADA');
+    if (!pendiente) return null;
+    try {
+      return await api('POST', `/api/solicitudes-repuesto/${pendiente.id}/entregar`, undefined, BODEGA);
+    } catch (e) {
+      if (e.status === 409) return null;
+      throw e;
+    }
+  }, `solicitud de repuesto en CB-Taller-Bodega (${bk})`);
+  current.steps.push(`CB-Taller-Bodega entrega ${s.partRequestId}`);
+  return s;
+}
+
 async function instances(bk) {
   return api('GET', `/process-instance?businessKey=${encodeURIComponent(bk)}`);
 }
@@ -174,6 +212,11 @@ async function scenario(name, fn) {
   if (!current.ok) console.log('     ' + current.error);
 }
 
+// El Banco y la Bodega responden solos después de unos segundos; en la prueba se responde a mano.
+const simulacionManual = { respuestaAutomatica: false };
+await api('PUT', '/api/simulacion', simulacionManual, BANCO);
+await api('PUT', '/api/simulacion', simulacionManual, BODEGA);
+
 // ---------------------------------------------------------------- Postventa
 async function startPostventa(bk, vin, mileageKm) {
   await api('POST', '/message', {
@@ -197,7 +240,10 @@ async function workshop(bk, { partNeeded = false, inspections = [true] } = {}) {
   const dx = await waitTask(bk, 'diagnoseVehicle');
   check(dx.v.vin && dx.v.symptom && dx.v.mileageKm != null, 'taller recibe VIN, síntoma y kilometraje por la Call Activity');
   await complete(dx, { mileageKm: Number(dx.v.mileageKm) + 5, diagnosis: 'Falla en el módulo de cámara', additionalPartNeeded: partNeeded, partCode: partNeeded ? 'CAM-123' : '' });
-  if (partNeeded) await correlate('RepuestoRecibido', bk, { partReceivedRef: 'REM-001' });
+  if (partNeeded) {
+    const s = await bodegaEntrega(bk);
+    check(s.partCode === 'CAM-123' && s.estado === 'ENTREGADA', 'CB-Taller-Bodega recibió el repuesto pedido y avisó RepuestoRecibido');
+  }
   for (const ok of inspections) {
     const rep = await waitTask(bk, 'repairVehicle');
     check(rep.v.diagnosis === 'Falla en el módulo de cámara', 'reparación muestra el diagnóstico');
@@ -219,6 +265,7 @@ await scenario('Postventa A: recall activo, garantía aprobada, AND, taller con 
   await workshop(bk, { inspections: [false, true] });
   const pi = await waitEnd(bk, 'CB_PostventaGarantias', 'closedEnd');
   check((await variable(pi.id, 'customerSatisfaction')) === 5, 'satisfacción del cliente registrada al cerrar');
+  check((await variable(pi.id, 'campaignId')) === 'RECALL-CAMARA-2026', 'campaña consultada en CB-Taller-Bodega por HTTP Connector');
 });
 
 await scenario('Postventa B: fuera de garantía, cotización rechazada', async () => {
@@ -227,6 +274,8 @@ await scenario('Postventa B: fuera de garantía, cotización rechazada', async (
   await correlate('CotizacionRechazada', bk);
   const pi = await waitEnd(bk, 'CB_PostventaGarantias', 'unauthorizedEnd');
   check((await variable(pi.id, 'coverageStatus')) === 'REQUIERE_COTIZACION', 'DMN = REQUIERE_COTIZACION (80.000 km)');
+  const quoteId = await variable(pi.id, 'quoteId');
+  check(String(quoteId).startsWith('COT-') && (await variable(pi.id, 'quoteAmount')) === 850000, `cotización ${quoteId} creada en CB-Taller-Bodega`);
 });
 
 await scenario('Postventa C: garantía no aprobada, cotización aceptada, repuesto adicional', async () => {
@@ -354,13 +403,16 @@ async function payAndClose(bk, { loops = false } = {}) {
     await fireTimer(bk, 'bankTimeout');
     let fx = await waitTask(bk, 'fixBankBatch');
     await complete(fx, { paymentBatchId: `LOTE-${bk}`, correction: 'Se consultó al banco' });
-    await correlate('DispersionRechazada', bk, { bankResponseCode: 'R03-CUENTA-INVALIDA' });
+    await bancoResponde(bk, 'rechazar', { codigo: 'R03-CUENTA-INVALIDA' });
     fx = await waitTask(bk, 'fixBankBatch');
-    check(fx.v.bankResponseCode === 'R03-CUENTA-INVALIDA', 'Tesorería ve el código de rechazo del Banco');
+    check(fx.v.bankResponseCode === 'R03-CUENTA-INVALIDA', 'Tesorería ve el código de rechazo de CB-Banco');
     await complete(fx, { paymentBatchId: `LOTE-${bk}`, correction: 'Cuenta corregida' });
   }
-  await correlate('DispersionAceptada', bk, { bankReference: 'BANCO-OK-1' });
-  return waitEnd(bk, 'CB_GestionNomina', 'payrollEnd');
+  const d = await bancoResponde(bk, 'aceptar');
+  check(d.paymentBatchId === `LOTE-${bk}` && d.payrollTotal === 1000000, 'CB-Banco recibió el lote y el total por HTTP Connector');
+  const pi = await waitEnd(bk, 'CB_GestionNomina', 'payrollEnd');
+  check(String(await variable(pi.id, 'bankReference')).startsWith('BANCO-'), 'referencia bancaria devuelta por CB-Banco');
+  return pi;
 }
 
 await scenario('Nómina A: CONTINUAR, novedad corregida, recálculo, devolución de Jefatura, timeout y rechazo bancario', async () => {
@@ -409,6 +461,9 @@ for (const [label, extra, setup] of [
 }
 
 // ---------------------------------------------------------------- resumen
+const simulacionAutomatica = { respuestaAutomatica: true };
+await api('PUT', '/api/simulacion', simulacionAutomatica, BANCO);
+await api('PUT', '/api/simulacion', simulacionAutomatica, BODEGA);
 const incidents = await api('GET', '/incident');
 const open = await api('GET', `/process-instance?businessKeyLike=%25${RUN}`);
 const totalChecks = results.reduce((s, r) => s + r.checks.length, 0);

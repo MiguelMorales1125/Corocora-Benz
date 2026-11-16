@@ -1,0 +1,33 @@
+server:
+  port: 9004
+
+spring:
+  application:
+    name: cb-banco
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:corocora}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+corocora:
+  # REST API de Camunda en CB-BPM-Engine.
+  engine-rest: ${ENGINE_REST_URL:http://localhost:9000/engine-rest}
+  # Respuesta automática del banco a cada dispersión (se puede cambiar con PUT /api/simulacion).
+  simulacion:
+    respuesta-automatica: ${BANCO_RESPUESTA_AUTOMATICA:true}
+    retardo-segundos: 10
+
+---
+# Perfil para correr sin PostgreSQL: --spring.profiles.active=h2
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:cb-banco;DB_CLOSE_DELAY=-1
+    username: sa
+    password:

@@ -53,7 +53,26 @@
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:serviceTask id="vehicleLookup" name="Consultar historial y campañas del VIN" camunda:type="external" camunda:topic="postventa.consultarVehiculo">
+    <bpmn:serviceTask id="vehicleLookup" name="Consultar historial y campañas del VIN" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">${sistemas.tallerBodega}/api/vehiculos/${vin}?km=${mileageKm}</camunda:inputParameter>
+            <camunda:inputParameter name="method">GET</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="historyRecordId">${json.texto(statusCode, response, 'historyRecordId')}</camunda:outputParameter>
+            <camunda:outputParameter name="warrantyEligible">${json.booleano(statusCode, response, 'warrantyEligible')}</camunda:outputParameter>
+            <camunda:outputParameter name="campaignActive">${json.booleano(statusCode, response, 'campaignActive')}</camunda:outputParameter>
+            <camunda:outputParameter name="campaignId">${json.texto(statusCode, response, 'campaignId')}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -81,7 +100,25 @@
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="prepareQuote" name="Enviar cotización al cliente" camunda:type="external" camunda:topic="postventa.enviarCotizacion">
+    <bpmn:serviceTask id="prepareQuote" name="Enviar cotización al cliente" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">${sistemas.tallerBodega}/api/cotizaciones</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">${json.cuerpo(execution, 'vin,customerName,symptom')}</camunda:inputParameter>
+            <camunda:outputParameter name="quoteId">${json.texto(statusCode, response, 'quoteId')}</camunda:outputParameter>
+            <camunda:outputParameter name="quoteAmount">${json.numero(statusCode, response, 'quoteAmount')}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_06</bpmn:incoming>
       <bpmn:incoming>Flow_09</bpmn:incoming>
       <bpmn:outgoing>Flow_10</bpmn:outgoing>
@@ -114,7 +151,7 @@
       <bpmn:incoming>Flow_15</bpmn:incoming>
       <bpmn:outgoing>Flow_16</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="notifyRejection" name="Notificar cierre al cliente" camunda:type="external" camunda:topic="comun.enviarNotificacion">
+    <bpmn:serviceTask id="notifyRejection" name="Notificar cierre al cliente" camunda:delegateExpression="${enviarNotificacionDelegate}">
       <bpmn:incoming>Flow_16</bpmn:incoming>
       <bpmn:outgoing>Flow_17</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -131,7 +168,24 @@
       <bpmn:outgoing>Flow_20</bpmn:outgoing>
       <bpmn:outgoing>Flow_21</bpmn:outgoing>
     </bpmn:parallelGateway>
-    <bpmn:serviceTask id="reserveParts" name="Reservar repuestos" camunda:type="external" camunda:topic="postventa.reservarRepuestos">
+    <bpmn:serviceTask id="reserveParts" name="Reservar repuestos" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="url">${sistemas.tallerBodega}/api/reservas</camunda:inputParameter>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/json</camunda:entry>
+                <camunda:entry key="Accept">application/json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">${json.cuerpo(execution, 'vin')}</camunda:inputParameter>
+            <camunda:outputParameter name="partsReservationStatus">${json.texto(statusCode, response, 'partsReservationStatus')}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_20</bpmn:incoming>
       <bpmn:outgoing>Flow_22</bpmn:outgoing>
     </bpmn:serviceTask>
