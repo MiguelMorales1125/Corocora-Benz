@@ -21,12 +21,17 @@ public class SimulacionController {
     return simulacion;
   }
 
-  public record Cambio(Boolean respuestaAutomatica, Integer retardoSegundos) {}
+  public record Cambio(Boolean respuestaAutomatica, Integer retardoSegundos) {
+  }
 
   @PutMapping
   public Simulacion cambiar(@RequestBody Cambio cambio) {
-    if (cambio.respuestaAutomatica() != null) simulacion.setRespuestaAutomatica(cambio.respuestaAutomatica());
-    if (cambio.retardoSegundos() != null) simulacion.setRetardoSegundos(cambio.retardoSegundos());
+    if (cambio.respuestaAutomatica() != null) {
+      simulacion.setRespuestaAutomatica(cambio.respuestaAutomatica());
+    }
+    if (cambio.retardoSegundos() != null) {
+      simulacion.setRetardoSegundos(cambio.retardoSegundos());
+    }
     return simulacion;
   }
 }

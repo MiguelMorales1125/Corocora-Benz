@@ -26,8 +26,19 @@ public class Vehiculo {
     this.campanaActiva = campanaActiva;
   }
 
-  public String getVin() { return vin; }
-  public String getModelo() { return modelo; }
-  public Integer getAnio() { return anio; }
-  public String getCampanaActiva() { return campanaActiva; }
+  public String getVin() {
+    return vin;
+  }
+
+  public String getModelo() {
+    return modelo;
+  }
+
+  public Integer getAnio() {
+    return anio;
+  }
+
+  public String getCampanaActiva() {
+    return campanaActiva;
+  }
 }

@@ -21,10 +21,27 @@ public class Simulacion {
     this.retardoSegundos = retardoSegundos;
   }
 
-  public boolean isRepuestosDisponibles() { return repuestosDisponibles; }
-  public void setRepuestosDisponibles(boolean disponible) { repuestosDisponibles = disponible; }
-  public boolean isRespuestaAutomatica() { return respuestaAutomatica; }
-  public void setRespuestaAutomatica(boolean respuestaAutomatica) { this.respuestaAutomatica = respuestaAutomatica; }
-  public int getRetardoSegundos() { return retardoSegundos; }
-  public void setRetardoSegundos(int retardoSegundos) { this.retardoSegundos = Math.max(0, retardoSegundos); }
+  public boolean isRepuestosDisponibles() {
+    return repuestosDisponibles;
+  }
+
+  public void setRepuestosDisponibles(boolean disponible) {
+    repuestosDisponibles = disponible;
+  }
+
+  public boolean isRespuestaAutomatica() {
+    return respuestaAutomatica;
+  }
+
+  public void setRespuestaAutomatica(boolean respuestaAutomatica) {
+    this.respuestaAutomatica = respuestaAutomatica;
+  }
+
+  public int getRetardoSegundos() {
+    return retardoSegundos;
+  }
+
+  public void setRetardoSegundos(int retardoSegundos) {
+    this.retardoSegundos = Math.max(0, retardoSegundos);
+  }
 }

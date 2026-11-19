@@ -2,6 +2,8 @@
 
 Basado en la arquitectura del caso MSGF (`09 MSGF Architecture.pdf`): un motor Camunda embebido en Spring Boot que orquesta varios sistemas de información. Cada sistema sale de un pool o actor de nuestros BPMN.
 
+Este documento es el plan con el que se hizo la migración. El detalle vigente de sesión, credencial interna y APIs está en [CONTRATO-INTEGRACION.md](CONTRATO-INTEGRACION.md), que es la fuente de verdad.
+
 ## Los 6 sistemas
 
 | # | Módulo | Puerto | Tipo | Equivale en MSGF | Responsable |
@@ -9,7 +11,7 @@ Basado en la arquitectura del caso MSGF (`09 MSGF Architecture.pdf`): un motor C
 | 1 | `cb-bpm-engine` | 9000 | Camunda 7 embebido + Postgres + correo | BPM-Engine | Persona 3 |
 | 2 | `cb-portal-cliente` | 9001 | Web (cliente externo) | CreditRequest | Persona 2 |
 | 3 | `cb-portal-ti` | 9002 | Web (empleado que reporta) + API de tickets | CreditRequest | Persona 1 |
-| 4 | `cb-central-sys` | 9003 | Web (empleados, un menú por departamento) | CentralSys | Los 3, cada uno su sección |
+| 4 | `cb-central-sys` | 9003 | Web (empleados; bandeja según los grupos de la sesión) | CentralSys | Los 3, cada uno su sección |
 | 5 | `cb-banco` | 9004 | Solo API REST | Treasury | Persona 3 |
 | 6 | `cb-taller-bodega` | 9005 | Solo API REST | Treasury | Persona 2 |
 
@@ -27,7 +29,7 @@ Taller-Bodega (9005) ◄──HTTP Connector─────────┤  (y r
 PortalTI API  (9002) ◄──HTTP Connector─────────┘  (tickets y base de conocimiento)
 ```
 
-- Webs → motor: REST API de Camunda en `http://localhost:9000/engine-rest` (iniciar procesos, enviar mensajes, listar y completar tareas).
+- Webs → motor: REST API de Camunda en `http://localhost:9000/engine-rest` (iniciar procesos, enviar mensajes, listar y completar tareas), desde el backend de cada portal y con la credencial interna; el navegador no llama al motor.
 - Motor → sistemas: `camunda:connector` con `http-connector`, o `JavaDelegate` para lógica interna.
 - Sistemas → motor (respuestas asíncronas): `POST /engine-rest/message` con la `businessKey`.
 
@@ -36,13 +38,13 @@ PortalTI API  (9002) ◄──HTTP Connector─────────┘  (tic
 | Base | La usa | Contenido |
 |---|---|---|
 | `corocora_camunda` | Engine | Tablas de Camunda (las crea solo) |
-| `corocora` | Portales, CentralSys, Banco, Taller-Bodega | Tablas de negocio, una por sistema (`ti_*`, `pv_*`, `banco_*`, ...) |
+| `corocora` | Portales, CentralSys, Banco, Taller-Bodega | Tablas de negocio, con un prefijo por sistema (`ti_*`, `pc_*`, `cs_*`, `banco_*`, `tb_*`) |
 
 Credenciales por variables de entorno: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` (por defecto `localhost:5432`, `postgres`). Para correr sin Postgres: perfil `h2` (`--spring.profiles.active=h2`).
 
-## Qué pasa con cada tarea automática (hoy workers JS)
+## Qué pasa con cada tarea automática (antes workers JS)
 
-| Topic actual | Proceso | Nueva implementación | Dónde |
+| Topic anterior | Proceso | Nueva implementación | Dónde |
 |---|---|---|---|
 | `ti.crearTicket` | TI | HTTP Connector `POST /api/tickets` | PortalTI |
 | `ti.registrarSolucion` | TI | HTTP Connector `POST /api/tickets/{id}/solucion` | PortalTI |
@@ -65,23 +67,24 @@ Los mensajes que hoy se simulan en Swagger los mandan sistemas reales:
 | `SolicitudServicio` | PortalCliente (el cliente crea la solicitud) |
 | `CotizacionAceptada` / `CotizacionRechazada` | PortalCliente (el cliente responde la cotización) |
 | `RepuestoRecibido` | Taller-Bodega |
+| `RepuestosDisponibles` | Taller-Bodega (llegaron los repuestos de una reserva pendiente) |
 | `DispersionAceptada` / `DispersionRechazada` | Banco |
 
 ## Vistas por sistema
 
 - **PortalCliente:** crear solicitud de servicio (VIN, cliente, tipo, km, síntoma), ver mis solicitudes y su estado, aceptar o rechazar la cotización.
 - **PortalTI:** reportar incidente (los campos de `ti-reporte`), ver mis tickets, confirmar la solución (tarea `confirmSolution`).
-- **CentralSys:** elegir departamento, bandeja de tareas por `candidateGroup`, reclamar, ver y completar la tarea con su formulario (form-js con los `.form` del motor), iniciar el ciclo de nómina.
+- **CentralSys:** bandeja de tareas según los grupos del usuario que inició sesión (`candidateGroup`), reclamar, ver y completar la tarea con su formulario (form-js con los `.form` del motor), iniciar el ciclo de nómina.
 - **Banco y Taller-Bodega:** sin pantallas, solo API y log en consola (como Treasury).
 
 ## Fases
 
-- [x] **F1. Estructura:** Maven multi-módulo con los 6 módulos; `backend` pasa a `cb-bpm-engine` en el puerto 9000 con Postgres (o perfil `h2`) y CORS abierto para las webs.
+- [x] **F1. Estructura:** Maven multi-módulo con los 6 módulos; `backend` pasa a `cb-bpm-engine` en el puerto 9000 con Postgres (o perfil `h2`). El CORS abierto de esta fase se retiró después: las webs llaman al motor desde su backend.
 - [x] **F2. Motor:** JavaDelegates de nómina y notificaciones; correo real (Mailpit) o log.
 - [x] **F3. APIs externas:** Banco y Taller-Bodega con sus tablas y respuestas asíncronas; cambiar sus topics en los BPMN a `http-connector`.
 - [x] **F4. PortalTI:** API de tickets + vistas; cambiar los topics `ti.*` a `http-connector`.
 - [x] **F5. PortalCliente:** vistas y mensajes.
-- [x] **F6. CentralSys:** bandejas por departamento con form-js; convertir los 12 formularios generados (dentro de los BPMN) a `.form`.
+- [x] **F6. CentralSys:** bandejas por grupo con form-js; convertir los 12 formularios generados (dentro de los BPMN) a `.form`.
 - [x] **F7. Cierre:** quitar los workers JS, adaptar `e2e.mjs`, actualizar README y diagrama de arquitectura.
 
 Regla para los modelos: todo cambio a un `.bpmn`, `.dmn` o `.form` se hace en la carpeta raíz (`bpmn/`, `dmn/`, `form/`) **y** en `cb-bpm-engine/src/main/resources/static.*`. Las dos copias deben quedar idénticas.

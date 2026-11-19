@@ -13,6 +13,7 @@
   <description>Motor Camunda y sistemas de información de Corocora Benz</description>
 
   <modules>
+    <module>cb-comun</module>
     <module>cb-bpm-engine</module>
     <module>cb-portal-cliente</module>
     <module>cb-portal-ti</module>
@@ -32,6 +33,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.corocorabenz</groupId>
+        <artifactId>cb-comun</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-dependencies</artifactId>

@@ -1,0 +1,69 @@
+/* Detalles propios de CentralSys; lo común está en /portal.css. */
+
+.cabecera-seccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.cabecera-seccion h2 {
+  margin: 0;
+}
+
+/* El formulario abierto es lo que la persona está haciendo: se destaca del resto. */
+#panel-tarea {
+  border: 2px solid var(--cb-primario);
+}
+
+#titulo-tarea:focus-visible {
+  outline: 3px solid var(--cb-foco);
+  outline-offset: 2px;
+}
+
+#formulario {
+  margin-bottom: 1rem;
+}
+
+.interruptores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+}
+
+/* Casilla y texto en la misma línea (portal.css pone las etiquetas en columna). */
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  font-weight: 400;
+}
+
+.interruptor input {
+  flex: none;
+}
+
+.actividad-fecha {
+  color: var(--cb-tinta-suave);
+  font-size: 0.9rem;
+}
+
+table td button {
+  white-space: nowrap;
+}
+
+/*
+ * portal.css da 44 px de alto mínimo y relleno a todo botón y campo; dentro del campo numérico
+ * de form-js (36 px de alto, flechas de 23 px de ancho) eso recorta las flechas y desborda la caja.
+ */
+.fjs-container .fjs-number-arrow-container button {
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.fjs-container .fjs-input-group .fjs-input {
+  min-height: 0;
+}

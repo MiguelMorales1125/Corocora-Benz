@@ -1,46 +1,112 @@
 package com.corocorabenz.tallerbodega.cotizacion;
 
+import com.corocorabenz.comun.motor.MotorClient;
+import com.corocorabenz.comun.motor.MotorException;
+import com.corocorabenz.comun.motor.MotorNoDisponibleException;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
-/** Reconcilia el estado con los eventos ya confirmados en Camunda, sin modificar los modelos. */
+/**
+ * Pone al día el estado de las cotizaciones con lo que ya ocurrió en el motor.
+ *
+ * <p>La respuesta del cliente llega al proceso por el Portal de Clientes, no a este sistema;
+ * por eso el estado se deduce del historial de la instancia en vez de agregar al BPMN una
+ * llamada de vuelta a la bodega.
+ */
 @Service
 public class EstadoCotizacionService {
+
   private static final Logger LOG = LoggerFactory.getLogger(EstadoCotizacionService.class);
-  private static final ParameterizedTypeReference<List<Map<String,Object>>> LISTA = new ParameterizedTypeReference<>() {};
-  private final RestClient engine;
+
+  private static final String PROCESO_POSTVENTA = "CB_PostventaGarantias";
+  private static final String ENVIADA = "ENVIADA";
+
+  /** Evento del BPMN que cierra cada desenlace de la cotización y el estado que le corresponde. */
+  private static final Map<String, String> ESTADO_POR_EVENTO = Map.of(
+      "quoteAccepted", "ACEPTADA",
+      "quoteRejected", "RECHAZADA",
+      "quoteExpired", "VENCIDA");
+
+  private final MotorClient motor;
   private final CotizacionRepository repository;
-  public EstadoCotizacionService(@Value("${corocora.engine-rest}") String url, CotizacionRepository repository) {
-    this.engine = RestClient.create(url); this.repository = repository;
+
+  public EstadoCotizacionService(MotorClient motor, CotizacionRepository repository) {
+    this.motor = motor;
+    this.repository = repository;
   }
-  public Cotizacion actualizar(Cotizacion c) {
-    if (!"ENVIADA".equals(c.getEstado()) || c.getBusinessKey() == null) return c;
-    try {
-      List<Map<String,Object>> instancias = engine.get().uri(u -> u.path("/history/process-instance")
-          .queryParam("processInstanceBusinessKey", c.getBusinessKey())
-          .queryParam("processDefinitionKey", "CB_PostventaGarantias").build()).retrieve().body(LISTA);
-      if (instancias == null || instancias.size() != 1) return c;
-      String id = String.valueOf(instancias.get(0).get("id"));
-      List<Map<String,Object>> actividades = engine.get().uri(u -> u.path("/history/activity-instance")
-          .queryParam("processInstanceId", id).queryParam("finished", true).build()).retrieve().body(LISTA);
-      if (actividades == null) return c;
-      for (Map<String,Object> a : actividades) {
-        String estado = switch (String.valueOf(a.get("activityId"))) {
-          case "quoteAccepted" -> "ACEPTADA";
-          case "quoteRejected" -> "RECHAZADA";
-          case "quoteExpired" -> "VENCIDA";
-          default -> null;
-        };
-        if (estado != null) { c.setEstado(estado); return repository.save(c); }
+
+  /**
+   * Actualiza las cotizaciones que siguen ENVIADA. Si el motor no responde se devuelven
+   * con el último estado conocido: consultar cotizaciones no debe fallar por eso.
+   */
+  public List<Cotizacion> actualizar(List<Cotizacion> cotizaciones) {
+    List<Cotizacion> actualizadas = new ArrayList<>();
+    boolean motorDisponible = true;
+    for (Cotizacion cotizacion : cotizaciones) {
+      if (!motorDisponible || !esperaRespuesta(cotizacion)) {
+        actualizadas.add(cotizacion);
+        continue;
       }
-    } catch (RestClientException ex) { LOG.warn("No se pudo reconciliar cotización {}: {}", c.getQuoteId(), ex.getMessage()); }
-    return c;
+      try {
+        actualizadas.add(actualizar(cotizacion));
+      } catch (MotorNoDisponibleException e) {
+        LOG.warn("El motor no responde; las cotizaciones se devuelven con su último estado conocido");
+        // No se insiste con las demás: cada intento esperaría el tiempo de conexión completo.
+        motorDisponible = false;
+        actualizadas.add(cotizacion);
+      }
+    }
+    return actualizadas;
+  }
+
+  private static boolean esperaRespuesta(Cotizacion cotizacion) {
+    return ENVIADA.equals(cotizacion.getEstado()) && cotizacion.getBusinessKey() != null;
+  }
+
+  private Cotizacion actualizar(Cotizacion cotizacion) {
+    try {
+      String estado = estadoSegunElMotor(cotizacion.getBusinessKey());
+      if (estado == null) {
+        return cotizacion;
+      }
+      cotizacion.setEstado(estado);
+      return repository.save(cotizacion);
+    } catch (MotorException e) {
+      LOG.warn("No se pudo reconciliar la cotización {}: el motor respondió HTTP {}",
+          cotizacion.getQuoteId(), e.getStatus());
+      return cotizacion;
+    }
+  }
+
+  /** @return el nuevo estado, o {@code null} si el cliente aún no responde o no se puede saber */
+  private String estadoSegunElMotor(String businessKey) {
+    Map<String, Object> filtroInstancias = new LinkedHashMap<>();
+    filtroInstancias.put("processInstanceBusinessKey", businessKey);
+    filtroInstancias.put("processDefinitionKey", PROCESO_POSTVENTA);
+    JsonNode instancias = motor.get("/history/process-instance", filtroInstancias);
+    // Con cero o varias instancias no se sabe a cuál pertenece la cotización.
+    if (instancias == null || instancias.size() != 1) {
+      return null;
+    }
+    Map<String, Object> filtroActividades = new LinkedHashMap<>();
+    filtroActividades.put("processInstanceId", instancias.get(0).path("id").asText());
+    filtroActividades.put("finished", true);
+    JsonNode actividades = motor.get("/history/activity-instance", filtroActividades);
+    if (actividades == null) {
+      return null;
+    }
+    for (JsonNode actividad : actividades) {
+      String estado = ESTADO_POR_EVENTO.get(actividad.path("activityId").asText());
+      if (estado != null) {
+        return estado;
+      }
+    }
+    return null;
   }
 }

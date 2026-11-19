@@ -1,9 +1,14 @@
 package com.corocorabenz.centralsys.web;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-@Controller public class HomeController {
-  @Value("${corocora.engine-rest}") private String engineRest;
-  @GetMapping("/") public String home(Model model) { model.addAttribute("engineRest", engineRest); return "index"; }
+
+/** Sirve la página de la intranet. Los datos los pide el navegador a /api/app/**. */
+@Controller
+public class HomeController {
+
+  @GetMapping("/")
+  public String home() {
+    return "index";
+  }
 }

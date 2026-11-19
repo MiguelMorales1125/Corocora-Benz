@@ -15,6 +15,10 @@ spring:
     open-in-view: false
 
 corocora:
+  # Credencial con la que los sistemas se identifican entre sí (encabezado X-CB-Internal).
+  internal-token: ${COROCORA_INTERNAL_TOKEN:cb-local-interno-demo}
+  # Toda la API es interna: la llaman el motor y CentralSys, nunca un navegador.
+  rutas-internas: /api/*
   # REST API de Camunda en CB-BPM-Engine.
   engine-rest: ${ENGINE_REST_URL:http://localhost:9000/engine-rest}
   # Entrega automática de repuestos solicitados (se puede cambiar con PUT /api/simulacion).

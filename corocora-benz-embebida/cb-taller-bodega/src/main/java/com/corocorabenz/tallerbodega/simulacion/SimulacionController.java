@@ -21,13 +21,21 @@ public class SimulacionController {
     return simulacion;
   }
 
-  public record Cambio(Boolean respuestaAutomatica, Integer retardoSegundos, Boolean repuestosDisponibles) {}
+  /** Solo cambian los campos que llegan; los demás conservan su valor. */
+  public record Cambio(Boolean respuestaAutomatica, Integer retardoSegundos, Boolean repuestosDisponibles) {
+  }
 
   @PutMapping
   public Simulacion cambiar(@RequestBody Cambio cambio) {
-    if (cambio.repuestosDisponibles() != null) simulacion.setRepuestosDisponibles(cambio.repuestosDisponibles());
-    if (cambio.respuestaAutomatica() != null) simulacion.setRespuestaAutomatica(cambio.respuestaAutomatica());
-    if (cambio.retardoSegundos() != null) simulacion.setRetardoSegundos(cambio.retardoSegundos());
+    if (cambio.repuestosDisponibles() != null) {
+      simulacion.setRepuestosDisponibles(cambio.repuestosDisponibles());
+    }
+    if (cambio.respuestaAutomatica() != null) {
+      simulacion.setRespuestaAutomatica(cambio.respuestaAutomatica());
+    }
+    if (cambio.retardoSegundos() != null) {
+      simulacion.setRetardoSegundos(cambio.retardoSegundos());
+    }
     return simulacion;
   }
 }

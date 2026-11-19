@@ -38,26 +38,91 @@ public class Dispersion {
   private Instant recibidaEn = Instant.now();
   private Instant respondidaEn;
 
-  public Long getId() { return id; }
-  public String getBusinessKey() { return businessKey; }
-  public void setBusinessKey(String businessKey) { this.businessKey = businessKey; }
-  public String getPaymentBatchId() { return paymentBatchId; }
-  public void setPaymentBatchId(String paymentBatchId) { this.paymentBatchId = paymentBatchId; }
-  public String getBankAccount() { return bankAccount; }
-  public void setBankAccount(String bankAccount) { this.bankAccount = bankAccount; }
-  public Long getPayrollTotal() { return payrollTotal; }
-  public void setPayrollTotal(Long payrollTotal) { this.payrollTotal = payrollTotal; }
-  public String getPayPeriodId() { return payPeriodId; }
-  public void setPayPeriodId(String payPeriodId) { this.payPeriodId = payPeriodId; }
-  public EstadoDispersion getEstado() { return estado; }
-  public void setEstado(EstadoDispersion estado) { this.estado = estado; }
-  public String getCodigoRespuesta() { return codigoRespuesta; }
-  public void setCodigoRespuesta(String codigoRespuesta) { this.codigoRespuesta = codigoRespuesta; }
-  public String getReferenciaBancaria() { return referenciaBancaria; }
-  public void setReferenciaBancaria(String referenciaBancaria) { this.referenciaBancaria = referenciaBancaria; }
-  public int getIntentosRespuesta() { return intentosRespuesta; }
-  public void setIntentosRespuesta(int intentosRespuesta) { this.intentosRespuesta = intentosRespuesta; }
-  public Instant getRecibidaEn() { return recibidaEn; }
-  public Instant getRespondidaEn() { return respondidaEn; }
-  public void setRespondidaEn(Instant respondidaEn) { this.respondidaEn = respondidaEn; }
+  public Long getId() {
+    return id;
+  }
+
+  public String getBusinessKey() {
+    return businessKey;
+  }
+
+  public void setBusinessKey(String businessKey) {
+    this.businessKey = businessKey;
+  }
+
+  public String getPaymentBatchId() {
+    return paymentBatchId;
+  }
+
+  public void setPaymentBatchId(String paymentBatchId) {
+    this.paymentBatchId = paymentBatchId;
+  }
+
+  public String getBankAccount() {
+    return bankAccount;
+  }
+
+  public void setBankAccount(String bankAccount) {
+    this.bankAccount = bankAccount;
+  }
+
+  public Long getPayrollTotal() {
+    return payrollTotal;
+  }
+
+  public void setPayrollTotal(Long payrollTotal) {
+    this.payrollTotal = payrollTotal;
+  }
+
+  public String getPayPeriodId() {
+    return payPeriodId;
+  }
+
+  public void setPayPeriodId(String payPeriodId) {
+    this.payPeriodId = payPeriodId;
+  }
+
+  public EstadoDispersion getEstado() {
+    return estado;
+  }
+
+  public void setEstado(EstadoDispersion estado) {
+    this.estado = estado;
+  }
+
+  public String getCodigoRespuesta() {
+    return codigoRespuesta;
+  }
+
+  public void setCodigoRespuesta(String codigoRespuesta) {
+    this.codigoRespuesta = codigoRespuesta;
+  }
+
+  public String getReferenciaBancaria() {
+    return referenciaBancaria;
+  }
+
+  public void setReferenciaBancaria(String referenciaBancaria) {
+    this.referenciaBancaria = referenciaBancaria;
+  }
+
+  public int getIntentosRespuesta() {
+    return intentosRespuesta;
+  }
+
+  public void setIntentosRespuesta(int intentosRespuesta) {
+    this.intentosRespuesta = intentosRespuesta;
+  }
+
+  public Instant getRecibidaEn() {
+    return recibidaEn;
+  }
+
+  public Instant getRespondidaEn() {
+    return respondidaEn;
+  }
+
+  public void setRespondidaEn(Instant respondidaEn) {
+    this.respondidaEn = respondidaEn;
+  }
 }

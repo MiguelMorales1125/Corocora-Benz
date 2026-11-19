@@ -14,7 +14,11 @@ import java.time.Instant;
 @Table(name = "tb_solicitud_repuesto")
 public class SolicitudRepuesto {
 
-  public enum Estado { SOLICITADA, ENTREGADA, SIN_PROCESO }
+  public enum Estado {
+    SOLICITADA,
+    ENTREGADA,
+    SIN_PROCESO
+  }
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,21 +33,71 @@ public class SolicitudRepuesto {
   private Instant solicitadaEn = Instant.now();
   private Instant entregadaEn;
 
-  public String getPartRequestId() { return id == null ? null : "REQ-" + id; }
-  public Long getId() { return id; }
-  public String getBusinessKey() { return businessKey; }
-  public void setBusinessKey(String businessKey) { this.businessKey = businessKey; }
-  public String getVin() { return vin; }
-  public void setVin(String vin) { this.vin = vin; }
-  public String getPartCode() { return partCode; }
-  public void setPartCode(String partCode) { this.partCode = partCode; }
-  public Estado getEstado() { return estado; }
-  public void setEstado(Estado estado) { this.estado = estado; }
-  public String getRemision() { return remision; }
-  public void setRemision(String remision) { this.remision = remision; }
-  public int getIntentosRespuesta() { return intentosRespuesta; }
-  public void setIntentosRespuesta(int intentosRespuesta) { this.intentosRespuesta = intentosRespuesta; }
-  public Instant getSolicitadaEn() { return solicitadaEn; }
-  public Instant getEntregadaEn() { return entregadaEn; }
-  public void setEntregadaEn(Instant entregadaEn) { this.entregadaEn = entregadaEn; }
+  public String getPartRequestId() {
+    return id == null ? null : "REQ-" + id;
+  }
+
+  public Long getId() {
+    return id;
+  }
+
+  public String getBusinessKey() {
+    return businessKey;
+  }
+
+  public void setBusinessKey(String businessKey) {
+    this.businessKey = businessKey;
+  }
+
+  public String getVin() {
+    return vin;
+  }
+
+  public void setVin(String vin) {
+    this.vin = vin;
+  }
+
+  public String getPartCode() {
+    return partCode;
+  }
+
+  public void setPartCode(String partCode) {
+    this.partCode = partCode;
+  }
+
+  public Estado getEstado() {
+    return estado;
+  }
+
+  public void setEstado(Estado estado) {
+    this.estado = estado;
+  }
+
+  public String getRemision() {
+    return remision;
+  }
+
+  public void setRemision(String remision) {
+    this.remision = remision;
+  }
+
+  public int getIntentosRespuesta() {
+    return intentosRespuesta;
+  }
+
+  public void setIntentosRespuesta(int intentosRespuesta) {
+    this.intentosRespuesta = intentosRespuesta;
+  }
+
+  public Instant getSolicitadaEn() {
+    return solicitadaEn;
+  }
+
+  public Instant getEntregadaEn() {
+    return entregadaEn;
+  }
+
+  public void setEntregadaEn(Instant entregadaEn) {
+    this.entregadaEn = entregadaEn;
+  }
 }

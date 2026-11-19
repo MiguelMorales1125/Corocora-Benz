@@ -1,1 +1,5 @@
 /target/
+
+# Configuración local y salida de los scripts de arranque
+configuracion.env
+logs/

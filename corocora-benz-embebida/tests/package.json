@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "e2e": "node e2e.mjs"
+    "e2e": "node e2e.mjs",
+    "identidades": "node identidades.mjs",
+    "regresion": "node regresion.mjs",
+    "permisos": "node permisos.mjs",
+    "portales": "node portales.mjs",
+    "todo": "node e2e.mjs && node identidades.mjs && node regresion.mjs && node permisos.mjs && node portales.mjs"
   }
 }

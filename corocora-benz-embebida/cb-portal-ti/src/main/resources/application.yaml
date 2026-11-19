@@ -1,6 +1,13 @@
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: 9002
+  servlet:
+    session:
+      cookie:
+        # Las cookies de localhost se comparten entre puertos: cada portal usa un nombre distinto.
+        name: CBSESSION_TI
+        same-site: lax
+        http-only: true
 
 spring:
   application:
@@ -15,8 +22,15 @@ spring:
     open-in-view: false
 
 corocora:
-  # REST API de Camunda en CB-BPM-Engine.
+  # REST API de Camunda en CB-BPM-Engine. Solo la usa el servidor, nunca el navegador.
   engine-rest: ${ENGINE_REST_URL:http://localhost:9000/engine-rest}
+  # Credencial con la que se reconocen los sistemas entre sí (encabezado X-CB-Internal).
+  internal-token: ${COROCORA_INTERNAL_TOKEN:cb-local-interno-demo}
+  # API de tickets que llama el motor: exige la credencial interna.
+  rutas-internas: /api/tickets,/api/tickets/*
+  portal:
+    # Sesión de personas en /api/app/** (inicio de sesión contra el motor).
+    habilitado: true
 
 ---
 # Perfil para correr sin PostgreSQL: --spring.profiles.active=h2

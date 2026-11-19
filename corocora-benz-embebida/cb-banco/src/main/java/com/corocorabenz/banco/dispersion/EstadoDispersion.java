@@ -9,6 +9,6 @@ public enum EstadoDispersion {
   RECHAZADA,
   /** Llegó otra dispersión del mismo proceso antes de responder esta. */
   REEMPLAZADA,
-  /** Se intentó responder muchas veces y el proceso nunca la estuvo esperando. */
+  /** Al responder, ya no había un proceso activo con esa businessKey; no se reintenta más. */
   SIN_PROCESO
 }
