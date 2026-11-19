@@ -91,7 +91,7 @@ Los plazos de los procesos son reales: el de resolución de TI (2, 8 o 24 horas 
 
 Al vencer el plazo de resolución (`slaTimer`), la tarea «Revisar incidente con plazo vencido» aparece en la bandeja de `responsable1`. Los otros temporizadores son `noResponse` (24 horas sin confirmación del usuario), `quoteExpired` (48 horas de la cotización) y `bankTimeout` (2 horas del Banco, que abre la corrección del lote con `SIN-RESPUESTA-2H`).
 
-Como alternativa, Cockpit (`demo` / `demo`) permite cambiar la fecha de vencimiento de un temporizador a la hora actual desde la vista de la instancia, en la pestaña Jobs. Esa vía **no se ha verificado** en esta demostración: compruébala una vez en el navegador antes de usarla en una presentación.
+Como alternativa, Cockpit (`demo` / `demo`) permite cambiar la fecha de vencimiento de un temporizador a la hora actual: en la vista de la instancia, pestaña «Jobs», botón «Change due date for this Job», opción «Set a specific date». Esta vía se comprobó el 19 de noviembre de 2026 con `slaTimer`; el motor ejecuta el temporizador por su cuenta en cerca de un minuto. El paso a paso y una orden de PowerShell con las tres llamadas están en la sección 5 de `docs/GUION-DEMOSTRACION.md`.
 
 ## Fuera del alcance de esta demostración
 

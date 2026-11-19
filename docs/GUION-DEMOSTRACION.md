@@ -9,9 +9,9 @@ Cómo leer el guion:
 - Los formularios vienen rellenos con valores de demostración. Salvo que el paso diga otra cosa, basta con dejarlos como están.
 - La **clave del caso** es el identificador que comparten todas las aplicaciones para un mismo trámite: `TI-…` para un incidente, `NOM-…` para un ciclo de nómina y `PV-…` para una solicitud de postventa. Aparece en el mensaje de confirmación al crear el caso, en la columna «Caso» de CentralSys y en Cockpit.
 
-Hay un único punto que no se puede hacer con las pantallas: **vencer un plazo sin esperar las horas reales**. Los plazos de los procesos son reales (2, 8 o 24 horas, 24 horas, 48 horas y 2 horas) y ningún portal permite adelantarlos. Las demostraciones que dependen de un plazo vencido están marcadas y usan la receta de la sección 5, que hace tres llamadas a la REST del motor.
+Hay un único punto que no se puede hacer con las pantallas: **vencer un plazo sin esperar las horas reales**. Los plazos de los procesos son reales (2, 8 o 24 horas, 24 horas, 48 horas y 2 horas) y ningún portal permite adelantarlos. Las demostraciones que dependen de un plazo vencido están marcadas y usan la sección 5, que ofrece dos vías: una orden de PowerShell que llama a la REST del motor, o la pestaña «Jobs» de Cockpit.
 
-Qué está comprobado. Tres acciones de este guion se comprobaron a mano en el navegador el 19 de noviembre de 2026, con los sistemas sobre PostgreSQL: el envío del reporte en el Portal TI (paso 2 de la sección 2.1), el triaje en CentralSys (pasos 3 y 4 de la sección 2.1) y el envío de una solicitud en el Portal del cliente (paso 1 de la sección 4.1). Los demás pasos se derivan de la suite `portales`, que recorre estos mismos caminos con la sesión de cada persona por las mismas API que usan las páginas, de los diagramas BPMN y del código de las páginas. Conviene ensayar el guion completo una vez antes de presentarlo; la sección 8 resume qué está comprobado y qué no.
+Qué está comprobado. El guion completo se ensayó el 19 de noviembre de 2026 en el navegador, con los seis sistemas sobre PostgreSQL: todos los caminos de las secciones 2, 3 y 4, los cuatro plazos vencidos, la vía de Cockpit y el reinicio de la sección 6. El motor terminó sin incidentes. En ese ensayo los botones y los campos de las páginas se accionaron con un script dentro del navegador, no con el ratón. La sección 8 detalla qué se comprobó y qué no.
 
 ## 1. Preparación
 
@@ -81,7 +81,9 @@ Para comprobar la bodega, entra a CentralSys como `bodega1` y mira en la secció
 
 Entra a Cockpit con `demo` / `demo`. En la lista de procesos desplegados aparecen los tres principales («Corocora Benz - Gestión de Incidentes TI», «Corocora Benz - Gestión de Nómina» y «Corocora Benz - Postventa y Garantías») y sus tres subprocesos («Corocora Benz - Resolución Técnica TI», «Corocora Benz - Validación de Novedad» y «Corocora Benz - Orden de Taller»). Al abrir un proceso se ve su diagrama, con un contador sobre la actividad donde está detenida cada instancia en curso, y la lista de instancias con su clave de caso (columna Business Key).
 
-En cada paso del guion se indica en qué actividad del diagrama debe verse el caso. El proyecto usa la edición comunitaria de Camunda 7, cuyo Cockpit lista las instancias en ejecución: cuando un caso termina deja de aparecer en esa lista. Lo que se indica para Cockpit se deriva de los diagramas; no forma parte de las tres comprobaciones manuales, así que conviene ensayarlo.
+En cada paso del guion se indica en qué actividad del diagrama debe verse el caso. El proyecto usa la edición comunitaria de Camunda 7, cuyo Cockpit lista las instancias en ejecución: cuando un caso termina deja de aparecer en esa lista.
+
+Cockpit muestra cada versión de un proceso por separado. Si los modelos se volvieron a desplegar, al abrir un proceso se ve la versión más reciente, y los casos que empezaron antes están en la versión anterior, que se elige en el campo «Definition Version». La lista de procesos sí suma las instancias de todas las versiones.
 
 ### 1.7 Orden sugerido
 
@@ -103,7 +105,7 @@ Qué hace el proceso: un empleado reporta un incidente; el sistema registra un t
 | 2 | Portal TI, `USR-01` | En «Reportar incidente», dejar los valores propuestos (sistema «Software del vehículo», descripción «El tablero no muestra la presión de las llantas», impacto «Medio», urgencia «Media», 1 equipo afectado, sin marcar la casilla de seguridad) y pulsar «Enviar reporte». | El mensaje «Reporte enviado con la clave TI-…» y, en unos segundos, el ticket en «Mis tickets» con el estado «En atención» y la solución «Pendiente». Anota la clave del caso. En Cockpit, el proceso «Corocora Benz - Gestión de Incidentes TI» tiene una instancia con esa clave detenida en «Validar clasificación y asignar grupo». |
 | 3 | CentralSys, `mesa1` | En «Mis tareas», localizar la tarea «Validar clasificación y asignar grupo» del caso y pulsar «Reclamar y abrir». | El formulario de la tarea, con «Prioridad calculada (DMN)» en P3 y «Plazo de resolución (DMN)» en PT24H (24 horas), los dos de solo lectura: los calculó la tabla de decisión. El campo «Grupo de atención» propone «Soporte TI Nivel 1». |
 | 4 | CentralSys, `mesa1` | Pulsar «Completar tarea». | El mensaje «Tarea completada.». La tarea desaparece de la bandeja y la acción aparece en «Mi actividad reciente». En Cockpit, la instancia está en «Resolver incidente técnico» y hay una instancia del subproceso «Corocora Benz - Resolución Técnica TI» en «Diagnosticar y resolver». |
-| 5 | CentralSys, `soporte1` | Cerrar la sesión de `mesa1` y entrar como `soporte1`. Abrir la tarea «Diagnosticar y resolver» con «Reclamar y abrir». El formulario muestra el ticket, la prioridad y la descripción, y propone una «Causa raíz» y una «Solución aplicada». Pulsar «Completar tarea». | «Tarea completada.». El proceso registra la solución en el ticket y avisa al usuario; como el correo está desactivado, el aviso queda escrito en la ventana del motor en una línea que empieza por `[correo simulado]`. En Cockpit, la instancia principal está en «Confirmar solución del incidente». |
+| 5 | CentralSys, `soporte1` | Cerrar la sesión de `mesa1` y entrar como `soporte1`. Abrir la tarea «Diagnosticar y resolver» con «Reclamar y abrir». El formulario muestra el ticket, la prioridad y la descripción, y propone una «Causa raíz» y una «Solución aplicada»; los campos «Causa registrada en el intento anterior» y «Solución rechazada por el usuario» están vacíos en el primer intento. Pulsar «Completar tarea». | «Tarea completada.». El proceso registra la solución en el ticket y avisa al usuario; como el correo está desactivado, el aviso queda escrito en la ventana del motor en una línea que contiene `[correo simulado]`. En Cockpit, la instancia principal está en «Confirmar solución del incidente». |
 | 6 | Portal TI, `USR-01` | Pulsar «Actualizar» en «Mis tickets». | El ticket pasa al estado «Esperando tu confirmación». La columna «Solución» muestra la solución y la causa que escribió soporte, y la columna «Acción» ofrece los botones «Confirmar solución» y «No se resolvió». |
 | 7 | Portal TI, `USR-01` | Pulsar «Confirmar solución». | El mensaje «Gracias. El ticket TI-… se cerrará en un momento.» y, en unos segundos, el estado «Cerrado». En Cockpit, la instancia ya no aparece entre las que están en ejecución: terminó en el fin «Incidente resuelto y cerrado». |
 
@@ -116,7 +118,7 @@ Repite los pasos 1 a 6 de la sección 2.1 con un incidente nuevo y continúa as�
 | Paso | Aplicación y cuenta | Qué se hace | Qué debe verse |
 |---|---|---|---|
 | 7 | Portal TI, `USR-01` | Pulsar «No se resolvió». | El mensaje «Entendido. El ticket TI-… vuelve a soporte.». El ticket vuelve al estado «En atención» y la columna «Solución» muestra «Solución anterior: » seguida de la solución rechazada. En Cockpit, la instancia vuelve a «Resolver incidente técnico». |
-| 8 | CentralSys, `soporte1` | Abrir de nuevo la tarea «Diagnosticar y resolver» del mismo caso. Ahora el formulario muestra, en solo lectura, «Causa registrada en el intento anterior» y «Solución rechazada por el usuario». Escribir una causa y una solución distintas (por ejemplo, «Sensor descalibrado» y «Sensor recalibrado en taller») y pulsar «Completar tarea». | «Tarea completada.». |
+| 8 | CentralSys, `soporte1` | Abrir de nuevo la tarea «Diagnosticar y resolver» del mismo caso. Ahora los campos de solo lectura «Causa registrada en el intento anterior» y «Solución rechazada por el usuario» traen lo que se registró la primera vez. Escribir una causa y una solución distintas (por ejemplo, «Sensor descalibrado» y «Sensor recalibrado en taller») y pulsar «Completar tarea». | «Tarea completada.». |
 | 9 | Portal TI, `USR-01` | Pulsar «Actualizar». | El mismo ticket, otra vez en «Esperando tu confirmación», con la segunda solución. |
 | 10 | Portal TI, `USR-01` | Pulsar «Confirmar solución». | El ticket queda «Cerrado» y el proceso termina en «Incidente resuelto y cerrado». |
 
@@ -124,7 +126,7 @@ Corresponde al caso CP-TI-04.
 
 ### 2.3 Variante opcional: incidente de seguridad atendido por Soporte especializado
 
-En el paso 2 marca la casilla «¿Afecta la seguridad del vehículo o de la información?». En el paso 3, `mesa1` verá la prioridad P1 y el plazo PT2H (2 horas): la tabla de decisión da la máxima prioridad a todo lo que afecta la seguridad. Si en «Grupo de atención» elige «Soporte especializado», la tarea de resolución se llama «Analizar causa raíz y resolver» y llega a la bandeja de `especialista1`, no a la de `soporte1`. Esta variante la cubre el caso CP-TI-02, que se ejecuta por la REST del motor; en las pantallas conviene ensayarla antes.
+En el paso 2 marca la casilla «¿Afecta la seguridad del vehículo o de la información?». En el paso 3, `mesa1` verá la prioridad P1 y el plazo PT2H (2 horas): la tabla de decisión da la máxima prioridad a todo lo que afecta la seguridad. Si en «Grupo de atención» elige «Soporte especializado», la tarea de resolución se llama «Analizar causa raíz y resolver» y llega a la bandeja de `especialista1`, no a la de `soporte1`. Esta variante la cubre el caso CP-TI-02 y se comprobó en las pantallas en el ensayo.
 
 ### 2.4 Excepciones con plazo vencido (necesitan la receta de la sección 5)
 
@@ -137,7 +139,7 @@ En el paso 2 marca la casilla «¿Afecta la seguridad del vehículo o de la info
 
 **El usuario no responde en 24 horas.** Deja un ticket en «Esperando tu confirmación» (paso 6 de la sección 2.1) y vence el temporizador `noResponse`. Al pulsar «Actualizar» en el Portal TI, el ticket aparece «Cerrado» sin que el usuario haya confirmado, y el proceso termina en el fin «Ticket cerrado por falta de respuesta».
 
-Las dos excepciones las cubre el caso CP-TI-02. La asignación al nuevo responsable es una función de CentralSys probada en sus pruebas de módulo; no está entre las comprobaciones manuales.
+Las dos excepciones las cubre el caso CP-TI-02. La asignación al nuevo responsable es una función de CentralSys probada en sus pruebas de módulo y comprobada en las pantallas en el ensayo.
 
 ## 3. Proceso 2: gestión de nómina
 
@@ -178,9 +180,9 @@ Sigue la sección 3.1 hasta el paso 4 y continúa así:
 | Paso | Aplicación y cuenta | Qué se hace | Qué debe verse |
 |---|---|---|---|
 | 5 | CentralSys, `tesoreria1` | En «Preparar lote de dispersión», cambiar la «Cuenta de origen» por `123` (un formato que el Banco no acepta) y pulsar «Completar tarea». | «Tarea completada.». Unos 10 segundos después el Banco rechaza la dispersión y aparece en la bandeja de `tesoreria1` la tarea «Corregir lote o consultar al Banco». En Cockpit, la instancia pasa de «Respuesta del Banco» a esa tarea. |
-| 6 | CentralSys, `tesoreria1` | Abrir «Corregir lote o consultar al Banco». El formulario muestra en «Código de respuesta del Banco» el código `R03-CUENTA-INVALIDA` y pide, como campo obligatorio, la «Cuenta de origen corregida». Como el proceso ya tiene una cuenta, el campo debe traer la que se envió (`123`) y no el valor de demostración: cambiarla por `000-123` y pulsar «Completar tarea». | «Tarea completada.». El motor reenvía el lote con la cuenta corregida; unos 10 segundos después el Banco acepta y el proceso termina en «Nómina pagada y comprobantes emitidos». |
+| 6 | CentralSys, `tesoreria1` | Abrir «Corregir lote o consultar al Banco». El formulario muestra en «Código de respuesta del Banco» el código `R03-CUENTA-INVALIDA` y pide, como campo obligatorio, la «Cuenta de origen corregida». Como el proceso ya tiene una cuenta, el campo trae la que se envió (`123`) y no el valor de demostración: cambiarla por `000-123` y pulsar «Completar tarea». | «Tarea completada.». El motor reenvía el lote con la cuenta corregida; unos 10 segundos después el Banco acepta y el proceso termina en «Nómina pagada y comprobantes emitidos». |
 
-Corresponde al caso CP-NOM-07. En ese caso la prueba responde por el Banco a mano; el rechazo automático por el formato de la cuenta está comprobado en las pruebas del módulo del Banco. La cadena completa en las pantallas, con el Banco respondiendo solo, conviene ensayarla antes.
+Corresponde al caso CP-NOM-07. En ese caso la prueba responde por el Banco a mano; el rechazo automático por el formato de la cuenta está comprobado en las pruebas del módulo del Banco. La cadena completa en las pantallas, con el Banco respondiendo solo, se comprobó en el ensayo.
 
 ### 3.4 Otras devoluciones que se pueden mostrar desde las pantallas
 
@@ -188,11 +190,11 @@ Corresponde al caso CP-NOM-07. En ese caso la prueba responde por el Banco a man
 - **Liquidación inconsistente.** En el paso 3, `nomina1` desmarca «Liquidación consistente». El sistema recalcula y la tarea «Revisar liquidación» vuelve a aparecer.
 - **Jefatura devuelve la liquidación.** En el paso 4, `jefatura1` desmarca «Aprobar liquidación» y escribe el motivo en «Motivo o devolución». La tarea «Revisar liquidación» vuelve a `nomina1`, que ve ese texto en «Motivo de la devolución de Jefatura».
 
-En los tres casos, cuando la tarea vuelve, la casilla que se desmarcó debe seguir desmarcada (el formulario muestra el valor que ya tiene el proceso): hay que marcarla para continuar. Las tres devoluciones las cubre el caso CP-NOM-01.
+En los tres casos, cuando la tarea vuelve, la casilla que se desmarcó sigue desmarcada (el formulario muestra el valor que ya tiene el proceso): hay que marcarla para continuar. Las tres devoluciones las cubre el caso CP-NOM-01.
 
 ### 3.5 El Banco no responde en 2 horas
 
-Esta excepción no se puede mostrar solo con pantallas: hay que poner el Banco en modo manual por su API (`PUT http://localhost:9004/api/simulacion` con `{"respuestaAutomatica":false}` y el encabezado `X-CB-Internal`) para que no responda, y vencer el temporizador `bankTimeout` con la receta de la sección 5. Entonces `tesoreria1` recibe «Corregir lote o consultar al Banco» con el código `SIN-RESPUESTA-2H` en lugar de un código de rechazo. Al terminar hay que devolver el Banco al modo automático con el mismo `PUT` y `true`. Si no se quiere usar la API en la presentación, la evidencia de este camino es el caso CP-NOM-01.
+Esta excepción no se puede mostrar solo con pantallas: hay que poner el Banco en modo manual por su API (`PUT http://localhost:9004/api/simulacion` con `{"respuestaAutomatica":false}` y el encabezado `X-CB-Internal`) para que no responda, y vencer el temporizador `bankTimeout` con la receta de la sección 5. Entonces `tesoreria1` recibe «Corregir lote o consultar al Banco» con el código `SIN-RESPUESTA-2H` en lugar de un código de rechazo. Al terminar hay que devolver el Banco al modo automático con el mismo `PUT` y `true`. En ese caso el campo «Cuenta de origen corregida» trae la cuenta válida que ya se había enviado (`000-123`); basta con completar la tarea con el Banco otra vez en automático para que el ciclo termine pagado. Si no se quiere usar la API en la presentación, la evidencia de este camino es el caso CP-NOM-01.
 
 ## 4. Proceso 3: postventa y garantías
 
@@ -243,7 +245,7 @@ Corresponde al caso CP-PV-06.
 ### 4.4 Otras variantes que se pueden mostrar desde las pantallas
 
 - **Garantía no aprobada.** Con el VIN `WDB0000000000000B` y 15000 km, la tabla de decisión responde que la garantía cubre el vehículo y `garantia1` recibe «Revisar cobertura y evidencia» con el resultado `CUBIERTO_POR_GARANTIA`. Si desmarca «Aprobar atención por garantía o campaña», el caso pasa a cotización y el cliente ve «Cobertura: garantía no aprobada; requiere cotización». Lo cubre el caso CP-PV-03.
-- **Inspección no aprobada.** Si `calidad1` desmarca «Inspección aprobada», la tarea «Reparar vehículo» vuelve a `tecnico1`, que ve el «Resultado de la última inspección». En la segunda inspección `calidad1` debe marcar la casilla de nuevo. Lo cubre el caso CP-PV-01.
+- **Inspección no aprobada.** Si `calidad1` desmarca «Inspección aprobada», la tarea «Reparar vehículo» vuelve a `tecnico1`, que ve el «Resultado de la última inspección». Ese campo repite lo que `calidad1` escribió en «Resultado de la prueba de ruta», así que conviene que escriba ahí el motivo del rechazo en lugar de dejar el valor propuesto («Prueba de ruta OK»). En la segunda inspección `calidad1` debe marcar la casilla de nuevo. Lo cubre el caso CP-PV-01.
 - **Espera de repuestos.** Si `bodega1` desmarca «Repuestos disponibles al reservar», la siguiente solicitud autorizada queda esperando: el cliente ve «Esperando aviso de repuestos disponibles» y, aunque `coordinador1` agende la cita, el taller no empieza. `bodega1` ve el caso en la tabla «Reservas pendientes de repuestos» y, al pulsar «Avisar disponibilidad», aparece «Se avisó al proceso PV-… que los repuestos están disponibles.» y comienza el taller. Hay que volver a marcar la casilla al terminar. Lo cubre el caso CP-PV-05.
 
 ### 4.5 El cliente no responde la cotización en 48 horas
@@ -267,21 +269,31 @@ Las tres llamadas:
 2. `GET http://localhost:9000/engine-rest/job?processInstanceId={id de la instancia raíz}&timers=true` lista sus temporizadores pendientes.
 3. `POST http://localhost:9000/engine-rest/job/{id del job}/execute` vence el temporizador en ese momento.
 
-Las mismas tres llamadas en una sola orden de PowerShell, para pegar en una terminal. Recorre todas las instancias del caso y vence el temporizador indicado, igual que la suite `e2e`; esta forma concreta de escribirlas no se ejecutó al redactar el guion, así que hay que ensayarla una vez:
+Las mismas tres llamadas en una sola orden de PowerShell, para pegar en una terminal. Recorre todas las instancias del caso y vence el temporizador indicado. Se comprobó en el ensayo, con Windows PowerShell 5.1, para los cuatro temporizadores:
 
 ```powershell
 $h = @{ 'X-CB-Internal' = 'cb-local-interno-demo' }
 $motor = 'http://localhost:9000/engine-rest'
 $caso = 'TI-XXXXXXXX'        # la clave que mostró el portal
 $temporizador = 'slaTimer'   # o noResponse, quoteExpired, bankTimeout
-foreach ($i in Invoke-RestMethod -Headers $h "$motor/process-instance?businessKey=$caso") {
-  foreach ($j in Invoke-RestMethod -Headers $h "$motor/job?processInstanceId=$($i.id)&activityId=$temporizador&timers=true") {
+$instancias = Invoke-RestMethod -Headers $h "$motor/process-instance?businessKey=$caso"
+foreach ($i in $instancias) {
+  $trabajos = Invoke-RestMethod -Headers $h "$motor/job?processInstanceId=$($i.id)&activityId=$temporizador&timers=true"
+  foreach ($j in $trabajos) {
     Invoke-RestMethod -Method Post -Headers $h "$motor/job/$($j.id)/execute"
+    "Temporizador $temporizador vencido en el caso $caso"
   }
 }
 ```
 
-Como alternativa sin terminal, Cockpit permite cambiar la fecha de vencimiento de un temporizador a la hora actual desde la vista de la instancia, en la pestaña Jobs. Esa vía **no se ha verificado** en esta demostración.
+Si la orden no escribe la línea «Temporizador … vencido», el caso no tiene ese temporizador pendiente en ese momento. Los resultados se guardan en variables antes de recorrerlos a propósito: en Windows PowerShell 5.1, recorrer directamente la salida de `Invoke-RestMethod` no separa los elementos de la lista y la orden falla con un error 404.
+
+**Alternativa sin terminal, desde Cockpit.** Se comprobó en el ensayo con `slaTimer`:
+
+1. En Cockpit, abre el proceso y pulsa el identificador (columna ID) de la instancia del caso para entrar a su vista.
+2. Abre la pestaña «Jobs». La fila muestra el temporizador, su fecha de vencimiento («Due Date») y su actividad, por ejemplo «Plazo de resolución vencido».
+3. Pulsa el botón de la columna «Action» («Change due date for this Job»), elige «Set a specific date», deja la fecha y la hora actuales que propone y pulsa «Change». Debe aparecer «Due date was set successfully.».
+4. Espera a que el motor ejecute el temporizador por su cuenta. En el ensayo tardó cerca de un minuto; la orden de PowerShell, en cambio, lo vence al instante.
 
 ## 6. Dónde ver la persistencia
 
@@ -305,7 +317,7 @@ Lo que no se conserva, y es normal:
 - **Los interruptores de los simuladores.** El Banco y la Bodega vuelven a su configuración de arranque (respuesta automática y repuestos disponibles).
 - **Todo, si se arrancó con `h2`.** Ese perfil usa bases en memoria que se borran al cerrar cada ventana.
 
-Qué está comprobado: el 19 de noviembre de 2026, con los sistemas sobre PostgreSQL, `cliente1` vio en el Portal del cliente sus solicitudes anteriores con su estado. El reinicio seguido de la comparación de datos no forma parte de las pruebas automatizadas, así que conviene ensayarlo una vez antes de presentarlo.
+Qué está comprobado: en el ensayo del 19 de noviembre de 2026 se detuvieron y se volvieron a arrancar los seis sistemas con casos a medias de los tres procesos. Antes y después coincidieron las instancias en ejecución y la actividad de cada una, las tareas abiertas, los temporizadores pendientes, el historial, las cuentas y las dispersiones del Banco, y los modelos no se volvieron a desplegar. En las pantallas, `USR-01` y `cliente1` vieron las mismas listas con los mismos estados, `mesa1` encontró la misma tarea pendiente y su actividad reciente, y esa tarea se completó con normalidad después del reinicio. Los tres portales y Cockpit pidieron iniciar sesión de nuevo.
 
 ## 7. Qué cuenta atiende qué tarea
 
@@ -347,12 +359,23 @@ La cuenta que atiende cada tarea sale del grupo candidato que la tarea tiene en 
 | Postventa | Inspeccionar reparación | `inspectores-calidad` | `calidad1` |
 | Postventa | Entregar vehículo y cerrar caso | `asesores-servicio` | `asesor1` |
 
-## 8. Qué está comprobado y qué conviene ensayar
+## 8. Qué se comprobó en el ensayo
 
-| Parte del guion | Respaldo |
+El guion completo se ensayó el 19 de noviembre de 2026, con los seis sistemas sobre PostgreSQL. Los pasos se hicieron en las páginas reales, en el navegador; los botones y los campos se accionaron con un script dentro de la página, no con el ratón. Al terminar, el motor no tenía incidentes.
+
+| Parte del guion | Resultado del ensayo |
 |---|---|
-| Envío del reporte en el Portal TI; triaje en CentralSys con P3 y PT24H y «Tarea completada.»; envío de una solicitud y lista de solicitudes en el Portal del cliente | Comprobado a mano en el navegador el 19 de noviembre de 2026 (comprobaciones PM-01 a PM-03 de `docs/CASOS-DE-PRUEBA.md`) |
-| Caminos 2.1, 2.2, 3.1, 4.1, 4.2 y 4.3, y el rechazo del Banco de 3.3 | Recorridos por la suite `portales` con la sesión de cada persona y por las mismas API que usan las páginas (casos CP-TI-03, CP-TI-04, CP-NOM-06, CP-NOM-07, CP-PV-06, CP-PV-07 y CP-PV-08, todos correctos). En esa suite el Banco y la Bodega se responden a mano; en el guion responden solos |
-| Excepciones de nómina (3.2 y 3.4), incidente de seguridad y especializado (2.3), plazos vencidos (2.4, 3.5 y 4.5) y variantes de postventa (4.4) | Recorridas por la suite `e2e` por la REST del motor (casos CP-TI-02, CP-NOM-01 a CP-NOM-05 y CP-PV-01 a CP-PV-05, todos correctos). No se recorrieron haciendo clic en las pantallas |
-| Textos de botones, campos y mensajes | Tomados del código de las páginas y de los formularios desplegados |
-| Lo que se indica para Cockpit, la orden de PowerShell de la sección 5 y el reinicio de la sección 6 | Derivado de los diagramas y de la documentación; no comprobado en esta sesión. Ensayar antes de presentar |
+| Incidentes de TI (2.1 a 2.4) | Comprobado completo: camino principal; rechazo de la solución y segunda ronda de soporte, con la causa y la solución anteriores a la vista; incidente de seguridad con P1 y PT2H atendido por `especialista1`; plazo de resolución vencido, revisión de `responsable1` y nueva tarea «Asignada a mí» para `soporte1`; cierre por falta de respuesta |
+| Nómina (3.1 a 3.5) | Comprobado completo: camino principal con el Banco aceptando solo; las tres casillas de simulación (2, 2 y 3 novedades); novedades fuera de corte no aprobadas; novedad no válida, liquidación inconsistente y devolución de Jefatura; rechazo del Banco por la cuenta `123` y corrección; Banco sin respuesta con el código `SIN-RESPUESTA-2H` |
+| Postventa (4.1 a 4.5) | Comprobado completo: campaña activa hasta la entrega; cotización rechazada; cotización aceptada con repuesto adicional entregado por `bodega1`; garantía no aprobada; inspección no aprobada; espera de repuestos con aviso de la bodega; cotización vencida |
+| Plazos vencidos (5) | La orden de PowerShell se comprobó con los cuatro temporizadores. La vía de Cockpit se comprobó con `slaTimer` |
+| Persistencia (6) | Comprobada con un reinicio completo de los seis sistemas |
+| Cockpit (1.6) | Comprobado en Cockpit: la lista de los seis procesos con sus nombres, el contador sobre la actividad y la clave del caso en la lista de instancias (en Incidentes de TI y en Nómina), y la separación por versiones. En los demás pasos, la actividad en la que queda cada caso se comprobó consultando al motor por su REST, que es de donde Cockpit toma esos datos, no mirando el diagrama |
+| Textos de botones, campos y mensajes | Los que se vieron en el ensayo coincidieron con los que cita el guion, salvo lo que se corrigió en esta versión |
+
+Lo que no se comprobó en el ensayo:
+
+- **Las líneas `[correo simulado]` de la ventana del motor.** No se miraron durante el ensayo; su formato se tomó del registro del motor de una ejecución anterior de las pruebas.
+- **Dos etiquetas intermedias del Portal del cliente:** «En atención de taller» y «Pendiente de entrega» (pasos 4 y 6 de la sección 4.1). Los casos pasaron por esos puntos sin consultar el portal; los textos salen del código de la página.
+- **Los botones «Soltar tarea» y «Cerrar sin completar»** de CentralSys.
+- **El uso con el ratón y el teclado.** Conviene recorrer al menos un camino a mano antes de presentar, para practicar los cambios de cuenta.
